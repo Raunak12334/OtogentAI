@@ -1,11 +1,17 @@
+import { Button } from "@/components/ui/button";
+import { requireAuth } from "@/lib/auth-utils";
 import { caller } from "@/trpc/server";
 
 const Page = async () => {
-  const users = await caller.getUsers();
+  await requireAuth();
+  const data = await caller.getUsers()
 
   return (
     <div className="min-h-screen min-w-screen flex items-center justify-center">
-      {JSON.stringify(users)}
+      <div>{JSON.stringify(data, null, 2)}</div>
+      <Button>
+        Logout
+      </Button>
     </div>
   );
 };
