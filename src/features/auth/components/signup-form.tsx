@@ -21,6 +21,7 @@ import {
     FieldContent,
 } from "@/components/ui/field"
 import Link from "next/link"
+import Image from "next/image"
 import { authClient } from "@/lib/auth-client"
 
 const signupSchema = z.object({
@@ -81,9 +82,11 @@ export const SignupForm = () => {
                         <div className="grid gap-6">
                             <div className="flex flex-col gap-4">
                                 <Button variant="outline" className="w-full" type="button" disabled={isPending}>
+                                    <Image alt="Github" src="/github.svg" width={20} height={20} />
                                     Continue with GitHub
                                 </Button>
                                 <Button variant="outline" className="w-full" type="button" disabled={isPending}>
+                                    <Image alt="Google" src="/google.svg" width={20} height={20} />
                                     Continue with Google
                                 </Button>
                             </div>
