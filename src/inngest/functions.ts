@@ -18,18 +18,36 @@ export const process = inngest.createFunction(
             system: "You're a helpful assistant",
             prompt: "what does prompt mean",
             model: google('gemini-3.5-flash'),
+            experimental_telemetry: {
+                isEnabled: true,
+                functionId: "joke_agent",
+                recordInputs: true,
+                recordOutputs: true,
+            },
         });
 
         const { steps: openaiSteps } = await step.ai.wrap("gemini=generate-text", generateText, {
             system: "You're a helpful assistant",
             prompt: "what does prompt mean",
             model: openai('gpt-4o-mini'),
+            experimental_telemetry: {
+                isEnabled: true,
+                functionId: "joke_agent",
+                recordInputs: true,
+                recordOutputs: true,
+            },
         });
 
         const { steps: anthropicSteps } = await step.ai.wrap("gemini=generate-text", generateText, {
             system: "You're a helpful assistant",
             prompt: "what does prompt mean",
             model: anthropic('claude-haiku'),
+            experimental_telemetry: {
+                isEnabled: true,
+                functionId: "joke_agent",
+                recordInputs: true,
+                recordOutputs: true,
+            },
         });
         return {
             geminiSteps,
