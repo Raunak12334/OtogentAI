@@ -1,15 +1,41 @@
-// src/inngest/functions.ts
 import { inngest } from "./client";
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 
-export const processTask = inngest.createFunction(
-    { id: "process-task", triggers: { event: "app/task.created" } },
+const google = createGoogleGenerativeAI();
+const openai = createOpenAI();
+const anthropic = createAnthropic();
+
+export const process = inngest.createFunction(
+    {
+        id: "process-ai",
+        triggers: { event: "process/ai" }
+    },
     async ({ event, step }) => {
-        const result = await step.run("handle-task", async () => {
-            return { processed: true, id: event.data.id };
+        const { steps: geminiSteps } = await step.ai.wrap("gemini=generate-text", generateText, {
+            system: "You're a helpful assistant",
+            prompt: "what does prompt mean",
+            model: google('gemini-3.5-flash'),
         });
 
-        await step.sleep("pause", "10s");
+        const { steps: openaiSteps } = await step.ai.wrap("gemini=generate-text", generateText, {
+            system: "You're a helpful assistant",
+            prompt: "what does prompt mean",
+            model: openai('gpt-4o-mini'),
+        });
 
-        return { message: `Task ${event.data.id} complete`, result };
+        const { steps: anthropicSteps } = await step.ai.wrap("gemini=generate-text", generateText, {
+            system: "You're a helpful assistant",
+            prompt: "what does prompt mean",
+            model: anthropic('claude-haiku'),
+        });
+        return {
+            geminiSteps,
+            openaiSteps,
+            anthropicSteps,
+        };
+
     }
 );
