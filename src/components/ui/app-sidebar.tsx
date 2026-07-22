@@ -24,7 +24,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import { useHasActiveSubscription } from "@/features/auth/components/subscriptions/hooks/use-subscripton";
+import { useHasActiveSubscription } from "@/features/subscriptions/hooks/use-subscription";
 
 const menuItems = [
     {
