@@ -1,12 +1,13 @@
 "use client"
 
-import { EntityContainer, EntityHeader } from "@/components/entity-components";
+import { EntityContainer, EntityHeader, EntityPagination, EntitySearch } from "@/components/entity-components";
 import { useCreateWorkflow, useSuspenseWorkflows } from "../hooks/use-workflows"
 import React from "react";
 import { error } from "console";
 import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
 import { router } from "better-auth/api";
 import { useRouter } from "next/navigation";
+import { useWorkflowsParams } from "../hooks/use-workflows-params";
 
 export const WorkflowList = () => {
     const workflows = useSuspenseWorkflows();
@@ -55,10 +56,33 @@ export const WorkflowsContainer = ({ children }: {
     return (
         <EntityContainer
             header={<WorkflowsHeader />}
-            search={<></>}
-            pagination={<></>}
+            search={<WorkflowsSearch />}
+            pagination={<WorkflowsPagination />}
         >
             {children}
         </EntityContainer>
     )
 };
+
+export const WorkflowsPagination = () => {
+    const workflows = useSuspenseWorkflows();
+    const [params, setParams] = useWorkflowsParams();
+    return (
+        <EntityPagination
+            page={workflows.data.page}
+            totalPages={workflows.data.totalPages}
+            onPageChange={(page) => setParams({ ...params, page })}
+        />
+    );
+};
+
+export const WorkflowsSearch = () => {
+    const [params, setParams] = useWorkflowsParams();
+    return (
+        <EntitySearch
+            value={params.search ?? ""}
+            onChange={(value) => setParams({ ...params, search: value })}
+            placeholder="Search Workflows..."
+        />
+    );
+}
