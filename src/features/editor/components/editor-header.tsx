@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SaveIcon } from "lucide-react";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { useSuspensseWorkflow, useUpdateWorkflowName } from "@/features/workflows/hooks/use-workflows";
+import { useSuspenseWorkflow, useUpdateWorkflowName } from "@/features/workflows/hooks/use-workflows";
 import { useEffect, useRef, useState } from "react";
 
 export const EditorSaveButton = ({ workflowId }: { workflowId: string }) => {
@@ -20,7 +20,7 @@ export const EditorSaveButton = ({ workflowId }: { workflowId: string }) => {
 }
 
 export const EditorNameInput = ({ workflowId }: { workflowId: string }) => {
-    const { data: workflow } = useSuspensseWorkflow(workflowId);
+    const { data: workflow } = useSuspenseWorkflow(workflowId);
     const updateWorkflow = useUpdateWorkflowName();
 
     const [isEditing, setIsEditing] = useState(false);
