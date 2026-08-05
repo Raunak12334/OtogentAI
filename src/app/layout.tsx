@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Otogent",
-  description: "Automation ",
+  title: "OtogentAI",
+  description: "AI Automation & Agents",
 };
 
 export default function RootLayout({

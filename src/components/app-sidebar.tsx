@@ -60,8 +60,8 @@ export const AppSidebar = () => {
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild className="gap-x-4 h-10 px-4">
                         <Link prefetch href={"/"}>
-                            <Image src={"/logo.svg"} alt="Otogent" width={30} height={30} />
-                            <span className="font-serif text-lg">Otogent</span>
+                            <Image src={"/logo.png"} alt="OtogentAI" width={30} height={30} />
+                            <span className="font-serif text-lg">OtogentAI</span>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
