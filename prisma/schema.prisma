@@ -89,6 +89,8 @@ user User @relation(fields: [userId], references: [id],onDelete: Cascade)
 
 enum NodeType {
   INITIAL
+  MANUAL_TRIGGER
+  HTTP_REQUEST
   
 }
 

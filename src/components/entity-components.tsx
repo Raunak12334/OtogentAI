@@ -189,7 +189,7 @@ export const EmptyView = ({ message, onNew }: EmptyViewProps) => {
 interface EntityListProps<T> {
     items: T[]
     renderItem: (item: T, index: number) => React.ReactNode;
-    getKey?: (itesms: T, index: number) => string | number;
+    getKey?: (items: T, index: number) => string | number;
     emptyView?: React.ReactNode;
     className?: string;
 }
