@@ -15,7 +15,7 @@ export type NodeTypeOption = {
     type: NodeType;
     label: string;
     description: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: React.ComponentType<{ className?: string }> | string;
 };
 
 const triggerNodes: NodeTypeOption[] = [
