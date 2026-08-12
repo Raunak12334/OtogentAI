@@ -4,8 +4,24 @@ import { NodeType } from "@/generated/prisma/enums";
 import prisma from "@/lib/db";
 import { createTRPCRouter, premiumProcedure, protectedProcedure } from "@/trpc/init";
 import z, { string } from "zod";
+import { inngest } from "@/inngest/client";
 
 export const workflowsRouter = createTRPCRouter({
+    execute: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ input, ctx }) => {
+            const workflow = await prisma.workflow.findUniqueOrThrow({
+                where: { id: input.id, userId: ctx.auth.user.id }
+            });
+            await inngest.send({
+                name: "workflows/execute.workflow",
+                data: {
+                    workflowId: input.id,
+                },
+            });
+            return workflow;
+        }),
+
     create: premiumProcedure.mutation(({ ctx }) => {
         return prisma.workflow.create({
             data: {
