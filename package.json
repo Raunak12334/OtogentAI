@@ -15,6 +15,7 @@
     "@ai-sdk/openai": "^4.0.15",
     "@base-ui/react": "^1.6.0",
     "@hookform/resolvers": "^5.4.0",
+    "@inngest/realtime": "^0.4.6",
     "@paralleldrive/cuid2": "^3.3.0",
     "@polar-sh/better-auth": "^1.8.4",
     "@polar-sh/sdk": "^0.47.1",
