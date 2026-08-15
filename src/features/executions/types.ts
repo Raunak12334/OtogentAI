@@ -1,5 +1,4 @@
 import { GetStepTools, Inngest } from "inngest";
-import z from "zod";
 
 export type WorkflowContext = Record<string, unknown>;
 
