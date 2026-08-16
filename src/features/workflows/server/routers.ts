@@ -5,6 +5,7 @@ import prisma from "@/lib/db";
 import { createTRPCRouter, premiumProcedure, protectedProcedure } from "@/trpc/init";
 import z, { string } from "zod";
 import { inngest } from "@/inngest/client";
+import { sendWorkflowExecution } from "@/inngest/utils";
 
 export const workflowsRouter = createTRPCRouter({
     execute: protectedProcedure
@@ -13,11 +14,8 @@ export const workflowsRouter = createTRPCRouter({
             const workflow = await prisma.workflow.findUniqueOrThrow({
                 where: { id: input.id, userId: ctx.auth.user.id }
             });
-            await inngest.send({
-                name: "workflows/execute.workflow",
-                data: {
-                    workflowId: input.id,
-                },
+            await sendWorkflowExecution({
+                workflowId: input.id,
             });
             return workflow;
         }),
