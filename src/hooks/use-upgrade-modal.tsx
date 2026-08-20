@@ -5,7 +5,7 @@ import { useState } from "react"
 export const useUpgradeModal = () => {
     const [open, setOpen] = useState(false);
 
-    const handelError = (error: unknown) => {
+    const handleError = (error: unknown) => {
         if (error instanceof TRPCClientError) {
             if (error.data?.code === "FORBIDDEN") {
                 setOpen(true);
@@ -15,5 +15,5 @@ export const useUpgradeModal = () => {
         return false;
     };
     const modal = <UpgradeModal open={open} onOpenChange={setOpen} />;
-    return { handelError, modal };
+    return { handleError, handelError: handleError, modal };
 };
