@@ -5,6 +5,7 @@ import { TRPCReactProvider } from "@/trpc/client";
 import { Toaster } from "@/components/ui/sonner";
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Provider } from 'jotai';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
             </Provider>
           </NuqsAdapter>
           <Toaster />
+          <SpeedInsights />
         </TRPCReactProvider>
       </body>
     </html>
