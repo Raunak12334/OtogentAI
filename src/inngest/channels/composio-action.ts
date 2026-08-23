@@ -1,8 +1,8 @@
 import { channel, staticSchema } from "inngest/realtime";
 
-export const STRIPE_TRIGGER_CHANNEL_NAME = "stripe-trigger-execution";
-export const stripeTriggerChannel = channel({
-    name: STRIPE_TRIGGER_CHANNEL_NAME,
+export const COMPOSIO_ACTION_CHANNEL_NAME = "composio-action-execution";
+export const composioActionChannel = channel({
+    name: COMPOSIO_ACTION_CHANNEL_NAME,
     topics: {
         status: {
             schema: staticSchema<{
