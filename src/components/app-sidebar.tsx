@@ -8,6 +8,7 @@ import {
     LogOutIcon,
     Route,
     StarIcon,
+    Workflow,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +40,11 @@ const menuItems = [
                 title: "Credentials",
                 icon: KeyIcon,
                 url: "/credentials",
+            },
+            {
+                title: "Integrations",
+                icon: Workflow,
+                url: "/integrations",
             },
             {
                 title: "Executions",

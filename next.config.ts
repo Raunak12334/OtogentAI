@@ -2,13 +2,21 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
   async redirects() {
     return [
       {
         source: "/",
         destination: "/workflows",
         permanent: false,
-      }
+      },
     ];
   },
   reactCompiler: true,
