@@ -4,16 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.15",
-    "@ai-sdk/google-vertex": "^5.0.21",
-    "@ai-sdk/openai": "^4.0.15",
     "@base-ui/react": "^1.6.0",
+    "@composio/core": "^0.17.0",
     "@hookform/resolvers": "^5.4.0",
     "@inngest/realtime": "^0.4.6",
     "@paralleldrive/cuid2": "^3.3.0",
@@ -29,6 +29,7 @@
     "@trpc/server": "^11.18.0",
     "@trpc/tanstack-react-query": "^11.18.0",
     "@types/pg": "^8.20.0",
+    "@vercel/speed-insights": "^2.0.0",
     "@xyflow/react": "^12.11.2",
     "ai": "^7.0.30",
     "better-auth": "^1.6.23",

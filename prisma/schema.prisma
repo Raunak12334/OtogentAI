@@ -23,6 +23,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   workflows     Workflow[]
+  credentials Credential[]
 
   @@unique([email])
   @@map("user")
@@ -76,12 +77,25 @@ model Verification {
   @@map("verification")
 }
 
+model Credential {
+id String @id @default(cuid())
+name String
+value String
+userId String
+user User @relation(fields: [userId], references: [id],onDelete: Cascade)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+Node Node[]
+type CredentialType
+}
+
 model Workflow {
 id String @id @default(cuid())
 name String
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 nodes Node[]
+executions Execution[]
 connections Connection[]
 userId String
 user User @relation(fields: [userId], references: [id],onDelete: Cascade)
@@ -91,11 +105,7 @@ enum NodeType {
   INITIAL
   MANUAL_TRIGGER
   HTTP_REQUEST
-  GOOGLE_FORM_TRIGGER
-  STRIPE_TRIGGER
-  ANTHROPIC
-  GEMINI
-  OPENAI
+  COMPOSIO_ACTION
 }
 
 model Node {
@@ -107,12 +117,21 @@ model Node {
  type NodeType
  position Json
  data Json @default("{}")
-
+ credentialId String?
+ credential Credential? @relation(fields: [ credentialId], references: [id])
+ 
 outpoutConnections Connection[] @relation("FromNode")
 inputConnections Connection[] @relation("ToNode")
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+
+}
+
+enum CredentialType {
+  OPENAI
+  ANTHROPIC
+  GEMINI
 }
 
 model Connection{
@@ -132,5 +151,25 @@ createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
 @@unique([fromNodeId, toNodeId, fromOutput, toInput])
+
+}
+
+enum ExecutionStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model Execution {
+  id String @id @default(cuid())
+  workflowId String
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  inngestEventId String @unique
+  output Json?
+  status ExecutionStatus @default(RUNNING)
+  error String? @db.Text
+  errorStack String? @db.Text
 
 }

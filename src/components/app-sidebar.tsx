@@ -8,6 +8,7 @@ import {
     LogOutIcon,
     Route,
     StarIcon,
+    Workflow,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,6 +23,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { useHasActiveSubscription } from "@/features/subscriptions/hooks/use-subscription";
@@ -41,6 +43,11 @@ const menuItems = [
                 url: "/credentials",
             },
             {
+                title: "Integrations",
+                icon: Workflow,
+                url: "/integrations",
+            },
+            {
                 title: "Executions",
                 icon: HistoryIcon,
                 url: "/executions",
@@ -57,14 +64,18 @@ export const AppSidebar = () => {
     return (
         <Sidebar collapsible="icon">
             <SidebarHeader>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild className="gap-x-4 h-10 px-4">
-                        <Link prefetch href={"/"}>
-                            <Image src={"/logo.png"} alt="OtogentAI" width={30} height={30} />
-                            <span className="font-serif text-lg">OtogentAI</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
+                {/* Trigger row — always visible in both expanded and collapsed (icon) mode */}
+                <div className="flex items-center justify-between">
+                    <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+                        <SidebarMenuButton asChild className="gap-x-4 h-10 px-4">
+                            <Link prefetch href={"/"}>
+                                <Image src={"/logo.svg"} alt="OtogentAI" width={30} height={30} />
+                                <span className="font-serif text-lg">OtogentAI</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarTrigger />
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 {menuItems.map((group) => (
