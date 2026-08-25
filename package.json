@@ -12,6 +12,9 @@
     "inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.42",
+    "@ai-sdk/google": "^4.0.51",
+    "@ai-sdk/openai": "^4.0.47",
     "@base-ui/react": "^1.6.0",
     "@composio/core": "^0.17.0",
     "@hookform/resolvers": "^5.4.0",
