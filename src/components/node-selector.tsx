@@ -44,6 +44,33 @@ const executionNodes: NodeTypeOption[] = [
         description: "Make an HTTP request",
         icon: GlobeIcon,
     },
+    {
+        type: NodeType.OPENAI,
+        label: "OpenAI",
+        description: "Generate text and reason with OpenAI models",
+        icon: "/openai.svg",
+        initialData: {
+            model: "gpt-4o-mini",
+        },
+    },
+    {
+        type: NodeType.ANTHROPIC,
+        label: "Anthropic",
+        description: "Generate text and analyze with Claude models",
+        icon: "/anthropic.svg",
+        initialData: {
+            model: "claude-3-5-sonnet-latest",
+        },
+    },
+    {
+        type: NodeType.GEMINI,
+        label: "Google Gemini",
+        description: "Generate text and multimodal reasoning with Gemini",
+        icon: "/gemini.svg",
+        initialData: {
+            model: "gemini-2.0-flash",
+        },
+    },
 ];
 
 interface NodeSelectorProps {

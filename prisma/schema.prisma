@@ -106,6 +106,9 @@ enum NodeType {
   MANUAL_TRIGGER
   HTTP_REQUEST
   COMPOSIO_ACTION
+  OPENAI
+  ANTHROPIC
+  GEMINI
 }
 
 model Node {
