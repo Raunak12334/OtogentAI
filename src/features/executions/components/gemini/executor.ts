@@ -102,8 +102,16 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     ? Handlebars.compile(data.systemPrompt)(context)
                     : undefined;
 
+                let modelName = data.model || "gemini-3.6-flash";
+                if (modelName === "gemini-2.0-flash" || modelName === "models/gemini-2.0-flash") {
+                    modelName = "gemini-3.6-flash";
+                }
+                if (modelName.startsWith("models/")) {
+                    modelName = modelName.replace(/^models\//, "");
+                }
+
                 const response = await generateText({
-                    model: google(data.model || "gemini-2.0-flash"),
+                    model: google(modelName),
                     prompt,
                     system,
                 });
