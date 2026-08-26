@@ -1,5 +1,5 @@
 import { prefetchExecution } from "@/features/executions/server/prefetch";
-import { ExecutiionView } from "@/features/executions/components/execution";
+import { ExecutionView } from "@/features/executions/components/execution";
 import { ExecutionsError, ExecutionsLoading } from "@/features/executions/components/executions";
 import { requireAuth } from "@/lib/auth-utils";
 import { HydrateClient } from "@/trpc/server";
@@ -21,7 +21,7 @@ const Page = async ({ params }: PageProps) => {
                 <HydrateClient>
                     <ErrorBoundary fallback={<ExecutionsError />}>
                         <Suspense fallback={<ExecutionsLoading />}>
-                            <ExecutiionView executionId={executionId} />
+                            <ExecutionView executionId={executionId} />
                         </Suspense>
                     </ErrorBoundary>
                 </HydrateClient>
