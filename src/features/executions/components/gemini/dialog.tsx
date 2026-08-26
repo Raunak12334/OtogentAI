@@ -38,9 +38,9 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const GEMINI_MODELS = [
-    { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Fast & Advanced)" },
-    { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Lightweight)" },
-    { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Deep Reasoning)" },
+    { value: "gemini-3.6-flash", label: "Gemini 3.6 Flash (Latest, Fast & Advanced)" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Deep Reasoning)" },
 ] as const;
 
 const formSchema = z.object({
@@ -85,7 +85,7 @@ export const GeminiDialog = ({
         defaultValues: {
             variableName: defaultValues.variableName || "geminiResponse",
             credentialId: defaultValues.credentialId || "",
-            model: defaultValues.model || "gemini-2.0-flash",
+            model: defaultValues.model || "gemini-3.6-flash",
             systemPrompt: defaultValues.systemPrompt || "",
             userPrompt: defaultValues.userPrompt || "",
         },
@@ -96,7 +96,7 @@ export const GeminiDialog = ({
             form.reset({
                 variableName: defaultValues.variableName || "geminiResponse",
                 credentialId: defaultValues.credentialId || "",
-                model: defaultValues.model || "gemini-2.0-flash",
+                model: defaultValues.model || "gemini-3.6-flash",
                 systemPrompt: defaultValues.systemPrompt || "",
                 userPrompt: defaultValues.userPrompt || "",
             });

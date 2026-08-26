@@ -68,7 +68,7 @@ const executionNodes: NodeTypeOption[] = [
         description: "Generate text and multimodal reasoning with Gemini",
         icon: "/gemini.svg",
         initialData: {
-            model: "gemini-2.0-flash",
+            model: "gemini-3.6-flash",
         },
     },
 ];
