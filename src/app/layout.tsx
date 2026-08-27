@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Quattrocento } from "next/font/google";
 import "./globals.css";
-import { TRPCReactProvider } from "@/trpc/client";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Provider } from "jotai";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "@/components/ui/sonner";
-import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { Provider } from 'jotai';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import { TRPCReactProvider } from "@/trpc/client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,8 +24,22 @@ const quattrocento = Quattrocento({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://otogent.ai",
+  ),
   title: "OtogentAI",
   description: "AI Automation & Agents",
+  openGraph: {
+    title: "OtogentAI",
+    description: "AI Automation & Agents",
+    images: ["/og-image.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OtogentAI",
+    description: "AI Automation & Agents",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
@@ -41,9 +55,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <TRPCReactProvider>
           <NuqsAdapter>
-            <Provider>
-              {children}
-            </Provider>
+            <Provider>{children}</Provider>
           </NuqsAdapter>
           <Toaster />
           <SpeedInsights />
