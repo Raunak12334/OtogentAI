@@ -14,11 +14,14 @@ export const metadata: Metadata = {
     description:
       "Autonomous AI launchpad for solo founders and engineering teams.",
     type: "website",
+    siteName: "Otogent AI",
     images: [
       {
         url: "/og-image.png",
-        width: 1200,
-        height: 630,
+        secureUrl: "/og-image.png",
+        width: 1024,
+        height: 1024,
+        type: "image/png",
         alt: "Otogent AI - Launchpad for Startups",
       },
     ],
