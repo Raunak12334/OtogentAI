@@ -14,6 +14,21 @@ export const metadata: Metadata = {
     description:
       "Autonomous AI launchpad for solo founders and engineering teams.",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Otogent AI - Launchpad for Startups",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Otogent AI - Launchpad for Startups",
+    description:
+      "Autonomous AI launchpad for solo founders and engineering teams.",
+    images: ["/og-image.png"],
   },
 };
 
