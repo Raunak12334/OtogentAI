@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Quattrocento } from "next/font/google";
 import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
 import { Toaster } from "@/components/ui/sonner";
@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const quattrocento = Quattrocento({
+  weight: ["400", "700"],
+  variable: "--font-quattrocento",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "OtogentAI",
   description: "AI Automation & Agents",
@@ -30,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${quattrocento.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <TRPCReactProvider>
