@@ -49,8 +49,8 @@ export const metadata: Metadata = {
       {
         url: "/og-image.png",
         secureUrl: "/og-image.png",
-        width: 1024,
-        height: 1024,
+        width: 1200,
+        height: 630,
         type: "image/png",
         alt: "Otogent AI - Launchpad for Startups",
       },
