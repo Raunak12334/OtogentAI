@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function LandingFooter() {
   const footerSections = [
     {
@@ -33,10 +35,10 @@ export function LandingFooter() {
         { label: "Affiliates", href: "#cta" },
         { label: "Careers", href: "#cta" },
         { label: "Company Info", href: "#hero" },
-        { label: "Terms of Service", href: "#faq" },
-        { label: "Privacy Policy", href: "#faq" },
-        { label: "Cookie Policy", href: "#faq" },
-        { label: "Data Processing Agreement", href: "#faq" },
+        { label: "Terms of Service", href: "/terms" },
+        { label: "Privacy Policy", href: "/privacy" },
+        { label: "Cookie Policy", href: "/cookies" },
+        { label: "Data Processing Agreement", href: "/privacy#eea-uk" },
       ],
     },
   ];
@@ -68,12 +70,21 @@ export function LandingFooter() {
                 <ul className="space-y-2.5 text-[13px] text-gray-500 dark:text-gray-400">
                   {section.links.map((link) => (
                     <li key={link.label}>
-                      <a
-                        href={link.href}
-                        className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        {link.label}
-                      </a>
+                      {link.href.startsWith("/") ? (
+                        <Link
+                          href={link.href}
+                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <a
+                          href={link.href}
+                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {link.label}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
