@@ -38,8 +38,25 @@ export const integrationsRouter = createTRPCRouter({
     getTools: protectedProcedure
         .input(z.object({ toolkitSlug: z.string().min(1) }))
         .query(async ({ input }) => {
+            try {
+                const importantTools = await composio.tools.getRawComposioTools({
+                    toolkits: [input.toolkitSlug],
+                    important: true,
+                    limit: 50,
+                });
+                const items = Array.isArray(importantTools)
+                    ? importantTools
+                    : (importantTools as { items?: unknown[] })?.items;
+                if (items && items.length > 0) {
+                    return importantTools;
+                }
+            } catch {
+                // Fallback if important filter is not supported
+            }
+
             return composio.tools.getRawComposioTools({
                 toolkits: [input.toolkitSlug],
+                limit: 50,
             });
         }),
 
