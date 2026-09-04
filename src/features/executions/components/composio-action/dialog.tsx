@@ -25,6 +25,24 @@ import {
 import { Loader2Icon, ZapIcon } from "lucide-react";
 import type { ComposioActionData } from "./executor";
 
+type ComposioToolItem = {
+    slug?: string;
+    name?: string;
+    description?: string;
+    inputParameters?: {
+        properties?: Record<string, { description?: string; type?: string; title?: string }>;
+        required?: string[];
+        schema?: {
+            properties?: Record<string, { description?: string; type?: string; title?: string }>;
+            required?: string[];
+        };
+    };
+    parameters?: {
+        properties?: Record<string, { description?: string; type?: string; title?: string }>;
+        required?: string[];
+    };
+};
+
 export type ComposioActionFormValues = ComposioActionData;
 
 interface Props {
@@ -55,6 +73,7 @@ export const ComposioActionDialog = ({
     const [actionArguments, setActionArguments] = useState<Record<string, string>>(
         (defaultValues.actionArguments as Record<string, string>) || {}
     );
+    const [searchQuery, setSearchQuery] = useState("");
     const [validationError, setValidationError] = useState<string | null>(null);
 
     // Fetch tools directly for the pre-filled toolkitSlug
@@ -65,37 +84,30 @@ export const ComposioActionDialog = ({
         ),
     });
 
-    const toolsList = useMemo(() => {
+    const toolsList = useMemo<ComposioToolItem[]>(() => {
         if (!rawTools) return [];
-        if (Array.isArray(rawTools)) return rawTools;
+        if (Array.isArray(rawTools)) return rawTools as ComposioToolItem[];
         if (Array.isArray((rawTools as { items?: unknown[] }).items)) {
-            return (rawTools as { items: unknown[] }).items;
+            return (rawTools as { items: ComposioToolItem[] }).items;
         }
         return [];
     }, [rawTools]);
 
+    const filteredToolsList = useMemo<ComposioToolItem[]>(() => {
+        if (!searchQuery.trim()) return toolsList;
+        const query = searchQuery.toLowerCase().trim();
+        return toolsList.filter((tool) => {
+            const name = (tool.name || "").toLowerCase();
+            const slug = (tool.slug || "").toLowerCase();
+            const desc = (tool.description || "").toLowerCase();
+            return name.includes(query) || slug.includes(query) || desc.includes(query);
+        });
+    }, [toolsList, searchQuery]);
+
     // Find selected tool schema
     const selectedTool = useMemo(() => {
         if (!actionSlug || !toolsList.length) return null;
-        return (
-            (toolsList as Array<{
-                slug?: string;
-                name?: string;
-                description?: string;
-                inputParameters?: {
-                    properties?: Record<string, { description?: string; type?: string; title?: string }>;
-                    required?: string[];
-                    schema?: {
-                        properties?: Record<string, { description?: string; type?: string; title?: string }>;
-                        required?: string[];
-                    };
-                };
-                parameters?: {
-                    properties?: Record<string, { description?: string; type?: string; title?: string }>;
-                    required?: string[];
-                };
-            }>).find((t) => t.slug === actionSlug) ?? null
-        );
+        return toolsList.find((t) => t.slug === actionSlug) ?? null;
     }, [actionSlug, toolsList]);
 
     // Extract dynamic parameter fields from selected tool
@@ -131,6 +143,7 @@ export const ComposioActionDialog = ({
             setActionArguments(
                 (defaultValues.actionArguments as Record<string, string>) || {}
             );
+            setSearchQuery("");
             setValidationError(null);
         }
     }, [open, defaultValues, toolkitSlug]);
@@ -213,41 +226,64 @@ export const ComposioActionDialog = ({
                         </div>
 
                         {/* 2. Select Action / Tool */}
-                        <div className="space-y-1.5">
-                            <Label>Action</Label>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label>Action</Label>
+                                {toolsList.length > 0 && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {filteredToolsList.length} of {toolsList.length} actions
+                                    </span>
+                                )}
+                            </div>
                             {isLoadingTools ? (
                                 <div className="flex items-center text-sm text-muted-foreground gap-2 py-2">
                                     <Loader2Icon className="size-4 animate-spin" />
                                     Loading {toolkitName} actions...
                                 </div>
                             ) : (
-                                <Select
-                                    value={actionSlug}
-                                    onValueChange={handleActionChange}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={`Select a ${toolkitName} action...`} />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-64">
-                                        {(toolsList as Array<{ slug: string; name?: string; description?: string }>).map((tool) => (
-                                            <SelectItem
-                                                key={tool.slug}
-                                                value={tool.slug}
-                                            >
-                                                <div className="flex flex-col text-left py-0.5 max-w-md">
-                                                    <span className="font-medium text-sm">
-                                                        {tool.name || tool.slug}
-                                                    </span>
-                                                    {tool.description && (
-                                                        <span className="text-xs text-muted-foreground line-clamp-1">
-                                                            {tool.description}
-                                                        </span>
-                                                    )}
+                                <div className="space-y-1.5">
+                                    {toolsList.length > 5 && (
+                                        <Input
+                                            placeholder={`Search ${toolkitName} actions (e.g. append, update, read)...`}
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="h-8 text-xs"
+                                        />
+                                    )}
+                                    <Select
+                                        value={actionSlug}
+                                        onValueChange={handleActionChange}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={`Select a ${toolkitName} action...`} />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-64">
+                                            {filteredToolsList.length === 0 ? (
+                                                <div className="p-3 text-center text-xs text-muted-foreground">
+                                                    No matching actions found
                                                 </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                            ) : (
+                                                filteredToolsList.map((tool) => (
+                                                    <SelectItem
+                                                        key={tool.slug}
+                                                        value={tool.slug!}
+                                                    >
+                                                        <div className="flex flex-col text-left py-0.5 max-w-md">
+                                                            <span className="font-medium text-sm">
+                                                                {tool.name || tool.slug}
+                                                            </span>
+                                                            {tool.description && (
+                                                                <span className="text-xs text-muted-foreground line-clamp-1">
+                                                                    {tool.description}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             )}
                         </div>
 
