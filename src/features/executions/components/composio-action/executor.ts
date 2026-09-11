@@ -86,25 +86,37 @@ export const composioActionExecutor: NodeExecutor<ComposioActionData> = async ({
                         const template = Handlebars.compile(val);
                         const compiled = template(context);
 
+                        const trimmed = compiled.trim();
                         // If user entered JSON or boolean/number, try to parse
-                        if (compiled === "true") {
+                        if (trimmed === "true") {
                             resolvedArgs[key] = true;
-                        } else if (compiled === "false") {
+                        } else if (trimmed === "false") {
                             resolvedArgs[key] = false;
-                        } else if (!isNaN(Number(compiled)) && compiled.trim() !== "") {
-                            resolvedArgs[key] = Number(compiled);
+                        } else if (!isNaN(Number(trimmed)) && trimmed !== "") {
+                            resolvedArgs[key] = Number(trimmed);
                         } else {
                             try {
                                 if (
-                                    (compiled.startsWith("{") && compiled.endsWith("}")) ||
-                                    (compiled.startsWith("[") && compiled.endsWith("]"))
+                                    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+                                    (trimmed.startsWith("[") && trimmed.endsWith("]"))
                                 ) {
-                                    resolvedArgs[key] = JSON.parse(compiled);
+                                    resolvedArgs[key] = JSON.parse(trimmed);
                                 } else {
                                     resolvedArgs[key] = compiled;
                                 }
                             } catch {
                                 resolvedArgs[key] = compiled;
+                            }
+                        }
+
+                        // Auto-extract ID if a full Google Drive or Google Sheets URL was pasted
+                        if (typeof resolvedArgs[key] === "string") {
+                            const str = resolvedArgs[key] as string;
+                            if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
+                                const idMatch = str.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                                if (idMatch) {
+                                    resolvedArgs[key] = idMatch[1];
+                                }
                             }
                         }
                     } else {
