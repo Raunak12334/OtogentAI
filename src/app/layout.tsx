@@ -33,10 +33,10 @@ const getBaseUrl = () => {
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
   title: "Otogent AI - Automations & Agent",
-  description: "AI Automation & Agents - Launchpad for Startups",
+  description: "AI Automation & Agents - Business Process Automations",
   openGraph: {
     title: "Otogent AI - Automations & Agent",
-    description: "AI Automation & Agents - Launchpad for Startups",
+    description: "AI Automation & Agents - Business Process Automations",
     url: "https://www.otogent.com",
     type: "website",
     siteName: "Otogent AI",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Otogent AI - Automations & Agent",
-    description: "AI Automation & Agents - Launchpad for Startups",
+    description: "AI Automation & Agents - Business Process Automations",
     images: ["/og-image.png?v=3"],
   },
 };

@@ -7,12 +7,11 @@ import { LandingHero } from "@/features/landing/components/landing-hero";
 
 export const metadata: Metadata = {
   title: "Otogent AI - Automations & Agent",
-  description:
-    "Let your startup get off the ground. Build, code, and scale a one-person billion-dollar company with autonomous AI agents.",
+  description: "AI Automation & Agents - Business Process Automations",
   openGraph: {
     title: "Otogent AI - Automations & Agent",
     description:
-      "Autonomous AI launchpad for solo founders and engineering teams.",
+      "AI Automation & Agents - Business Process Automations",
     url: "https://www.otogent.com",
     type: "website",
     siteName: "Otogent AI",
@@ -31,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Otogent AI - Automations & Agent",
     description:
-      "Autonomous AI launchpad for solo founders and engineering teams.",
+      "AI Automation & Agents - Business Process Automations",
     images: ["/og-image.png?v=3"],
   },
 };
