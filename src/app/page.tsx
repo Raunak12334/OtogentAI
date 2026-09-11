@@ -17,12 +17,12 @@ export const metadata: Metadata = {
     siteName: "Otogent AI",
     images: [
       {
-        url: "/og-image.png",
-        secureUrl: "/og-image.png",
-        width: 1024,
-        height: 1024,
+        url: "/og-image.png?v=2",
+        secureUrl: "/og-image.png?v=2",
+        width: 1200,
+        height: 630,
         type: "image/png",
-        alt: "Otogent AI - Launchpad for Startups",
+        alt: "Otogent AI - Automations & Agent",
       },
     ],
   },
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     title: "Otogent AI - Launchpad for Startups",
     description:
       "Autonomous AI launchpad for solo founders and engineering teams.",
-    images: ["/og-image.png"],
+    images: ["/og-image.png?v=2"],
   },
 };
 
