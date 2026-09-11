@@ -27,28 +27,23 @@ const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return "https://otogent.ai";
+  return "https://www.otogent.com";
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
-  title: "Otogent AI - Launchpad for Startups",
-  description: "AI Automation & Agents",
+  title: "Otogent AI - Automations & Agent",
+  description: "AI Automation & Agents - Launchpad for Startups",
   openGraph: {
-    title: "Otogent AI - Launchpad for Startups",
-    description: "AI Automation & Agents",
+    title: "Otogent AI - Automations & Agent",
+    description: "AI Automation & Agents - Launchpad for Startups",
+    url: "https://www.otogent.com",
     type: "website",
     siteName: "Otogent AI",
     images: [
       {
-        url: "/og-image.png?v=2",
-        secureUrl: "/og-image.png?v=2",
+        url: "/og-image.png?v=3",
+        secureUrl: "/og-image.png?v=3",
         width: 1200,
         height: 630,
         type: "image/png",
@@ -58,9 +53,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Otogent AI - Launchpad for Startups",
-    description: "AI Automation & Agents",
-    images: ["/og-image.png?v=2"],
+    title: "Otogent AI - Automations & Agent",
+    description: "AI Automation & Agents - Launchpad for Startups",
+    images: ["/og-image.png?v=3"],
   },
 };
 

@@ -6,19 +6,20 @@ import { LandingFooter } from "@/features/landing/components/landing-footer";
 import { LandingHero } from "@/features/landing/components/landing-hero";
 
 export const metadata: Metadata = {
-  title: "Otogent AI - Launchpad for Startups",
+  title: "Otogent AI - Automations & Agent",
   description:
     "Let your startup get off the ground. Build, code, and scale a one-person billion-dollar company with autonomous AI agents.",
   openGraph: {
-    title: "Otogent AI - Launchpad for Startups",
+    title: "Otogent AI - Automations & Agent",
     description:
       "Autonomous AI launchpad for solo founders and engineering teams.",
+    url: "https://www.otogent.com",
     type: "website",
     siteName: "Otogent AI",
     images: [
       {
-        url: "/og-image.png?v=2",
-        secureUrl: "/og-image.png?v=2",
+        url: "/og-image.png?v=3",
+        secureUrl: "/og-image.png?v=3",
         width: 1200,
         height: 630,
         type: "image/png",
@@ -28,10 +29,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Otogent AI - Launchpad for Startups",
+    title: "Otogent AI - Automations & Agent",
     description:
       "Autonomous AI launchpad for solo founders and engineering teams.",
-    images: ["/og-image.png?v=2"],
+    images: ["/og-image.png?v=3"],
   },
 };
 
