@@ -65,7 +65,7 @@ export function LandingHero() {
                   "'BubbledotICG-FinePos', 'Geist Pixel Circle', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
               }}
             >
-              Launchpad for Startup
+              Without Automation You cant grow Efficiantly
             </h1>
 
             {/* Subtext */}
