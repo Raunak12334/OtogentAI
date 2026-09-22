@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { connectTelegramWebhook, disconnectTelegramWebhook } from "./actions";
 
-export interface TelegramTriggerNodeData {
+export type TelegramTriggerNodeData = {
   botToken?: string;
   botUsername?: string;
   botName?: string;
@@ -36,7 +36,8 @@ export interface TelegramTriggerNodeData {
   secretToken?: string;
   commandFilter?: string;
   customBaseUrl?: string;
-}
+  [key: string]: unknown;
+};
 
 interface Props {
   open: boolean;
