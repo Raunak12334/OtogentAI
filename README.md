@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OtogentAI - AI-Powered Multi-Agent Automation Platform
 
-## Getting Started
+🚀 **Live:** https://www.otogent.com/
 
-First, run the development server:
+Build and deploy autonomous AI agent workflows at production scale. Visual builder, multi-model support (OpenAI, Claude, Gemini), 250+ integrations.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Visual Workflow Builder** - Drag-and-drop canvas for designing agent pipelines
+- **Multi-Agent Orchestration** - DAG execution with parallel agent coordination
+- **Multi-Model Support** - OpenAI, Anthropic Claude, Google Gemini, and more
+- **250+ Integrations** - Slack, Discord, Gmail, Stripe, Google Forms, and more
+- **Real-Time Execution** - Monitor every step of agent runs live
+- **Secure Credential Management** - AES encryption for API keys
+- **Human-in-the-Loop** - Pause workflows for approval before critical actions
+- **Industry Blueprints** - Pre-built templates for Real Estate, Healthcare, E-commerce, Finance, Marketing, Education
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend:** Next.js 15, React, TypeScript, Tailwind CSS, React Flow
+- **Backend:** Node.js, Express, TypeScript
+- **Database:** PostgreSQL, Prisma ORM
+- **AI:** OpenAI, Anthropic, Google Gemini APIs
+- **Real-time:** WebSockets, Server-Sent Events
+- **Auth:** Better Auth / NextAuth
+- **Payments:** Polar / Stripe
+- **Deployment:** Vercel, Docker, AWS
 
-## Learn More
+## Screenshots
 
-To learn more about Next.js, take a look at the following resources:
+[Add 5-6 screenshots of:
+- Visual workflow builder
+- Multi-agent DAG view
+- Real-time execution monitor
+- Industry blueprint gallery
+- Pricing page
+- Dashboard]
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Run Locally
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Clone the repo
+2. `npm install`
+3. Copy `.env.example` to `.env`
+4. `npm run dev`
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+OtogentAI is currently closed-source, but contributions to documentation and examples are welcome.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+Proprietary - All rights reserved.
