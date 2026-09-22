@@ -35,6 +35,12 @@ const triggerNodes: NodeTypeOption[] = [
         description: "Starts the workflow when you manually run it",
         icon: MousePointer2Icon,
     },
+    {
+        type: NodeType.TELEGRAM_TRIGGER,
+        label: "Telegram Trigger",
+        description: "Runs when a message or command is sent to your Telegram bot",
+        icon: "/telegram.svg",
+    },
 ];
 
 const executionNodes: NodeTypeOption[] = [
@@ -43,6 +49,18 @@ const executionNodes: NodeTypeOption[] = [
         label: "HTTP Request",
         description: "Make an HTTP request",
         icon: GlobeIcon,
+    },
+    {
+        type: NodeType.TELEGRAM_ACTION,
+        label: "Send Telegram Message",
+        description: "Send a message or reply to a Telegram chat",
+        icon: "/telegram.svg",
+        initialData: {
+            variableName: "telegramResponse",
+            authType: "inherit",
+            chatId: "{{telegram.chatId}}",
+            parseMode: "HTML",
+        },
     },
     {
         type: NodeType.OPENAI,
