@@ -109,6 +109,8 @@ enum NodeType {
   OPENAI
   ANTHROPIC
   GEMINI
+  TELEGRAM_TRIGGER
+  TELEGRAM_ACTION
 }
 
 model Node {
@@ -135,6 +137,7 @@ enum CredentialType {
   OPENAI
   ANTHROPIC
   GEMINI
+  TELEGRAM
 }
 
 model Connection{
