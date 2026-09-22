@@ -51,7 +51,7 @@ const formSchema = z.object({
   botToken: z.string().optional(),
   chatId: z.string().min(1, { message: "Chat ID is required" }),
   text: z.string().min(1, { message: "Message text is required" }),
-  parseMode: z.enum(["HTML", "MarkdownV2", "Markdown", "None"]).default("HTML"),
+  parseMode: z.enum(["HTML", "MarkdownV2", "Markdown", "None"]),
 });
 
 export type TelegramActionFormValues = z.infer<typeof formSchema>;
