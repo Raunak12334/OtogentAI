@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { connectTelegramWebhook, disconnectTelegramWebhook } from "./actions";
 
-export interface TelegramTriggerNodeData {
+export interface TelegramTriggerNodeData extends Record<string, unknown> {
   botToken?: string;
   botUsername?: string;
   botName?: string;

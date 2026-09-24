@@ -4,7 +4,25 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "@/lib/db";
 import { polarClient } from "@/lib/polar";
 
+const getAuthBaseUrl = () => {
+    const envUrl = process.env.BETTER_AUTH_URL;
+    if (envUrl && !envUrl.includes("vercel.app")) {
+        return envUrl;
+    }
+    if (process.env.NODE_ENV === "production") {
+        return "https://www.otogent.com";
+    }
+    return envUrl || "http://localhost:3000";
+};
+
 export const auth = betterAuth({
+    baseURL: getAuthBaseUrl(),
+    trustedOrigins: [
+        "https://www.otogent.com",
+        "https://otogent.com",
+        "https://otogent.vercel.app",
+        "http://localhost:3000",
+    ],
     database: prismaAdapter(prisma, { provider: "postgresql", }),
     emailAndPassword: {
         enabled: true,
