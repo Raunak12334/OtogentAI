@@ -48,23 +48,21 @@ export const SignupForm = () => {
     });
 
     const SignInGithub = async () => {
-        const data = await authClient.signIn.social({
+        await authClient.signIn.social({
             provider: "github",
+            callbackURL: "/workflows",
         }, {
-            onSuccess: () => {
-                router.push("/")
-            }, onError: () => {
+            onError: () => {
                 toast.error("Something went wrong");
             },
         });
     };
     const SignInGoogle = async () => {
-        const data = await authClient.signIn.social({
+        await authClient.signIn.social({
             provider: "google",
+            callbackURL: "/workflows",
         }, {
-            onSuccess: () => {
-                router.push("/")
-            }, onError: () => {
+            onError: () => {
                 toast.error("Something went wrong");
             },
         });
@@ -75,11 +73,10 @@ export const SignupForm = () => {
             name: values.email,
             email: values.email,
             password: values.password,
-            callbackURL: "/",
-
+            callbackURL: "/workflows",
         }, {
             onSuccess: () => {
-                router.push("/");
+                router.push("/workflows");
             },
             onError: (ctx) => {
                 toast.error(ctx.error.message);

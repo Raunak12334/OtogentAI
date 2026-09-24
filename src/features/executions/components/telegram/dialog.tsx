@@ -211,7 +211,7 @@ export const TelegramActionDialog = ({
                       </FormControl>
                       <SelectContent>
                         {credentials && credentials.length > 0 ? (
-                          credentials.map((cred) => (
+                          credentials.map((cred: { id: string; name: string }) => (
                             <SelectItem key={cred.id} value={cred.id}>
                               {cred.name}
                             </SelectItem>
