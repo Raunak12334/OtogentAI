@@ -60,6 +60,59 @@
   --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.45);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+  /* ─── Ploy Landing Page Design Tokens ─── */
+  --font-heading: Geist, sans-serif;
+  --font-button: Geist, sans-serif;
+  --ploy-neutral-primary: oklch(95.5% 0.003 106.01);
+  --ploy-neutral-secondary: oklch(97.3% 0.003 106);
+  --ploy-neutral-inverse: oklch(20.5% 0 0);
+  --ploy-neutral-light: oklch(95.5% 0.003 106.01);
+  --ploy-neutral-dark: oklch(0% 0 0);
+  --ploy-neutral-primary-s0: white;
+  --ploy-neutral-primary-s1: var(--ploy-neutral-primary);
+  --ploy-neutral-primary-s2: var(--ploy-neutral-secondary);
+  --ploy-neutral-primary-s3: color-mix(in oklch, var(--ploy-neutral-primary) 95%, var(--ploy-neutral-inverse));
+  --ploy-neutral-primary-s4: color-mix(in oklch, var(--ploy-neutral-primary) 88%, var(--ploy-neutral-inverse));
+  --ploy-neutral-primary-s5: color-mix(in oklch, var(--ploy-neutral-primary) 76%, var(--ploy-neutral-inverse));
+  --ploy-neutral-inverse-s0: color-mix(in oklch, var(--ploy-neutral-inverse) 88%, black);
+  --ploy-neutral-inverse-s1: var(--ploy-neutral-inverse);
+  --ploy-neutral-inverse-s2: color-mix(in oklch, var(--ploy-neutral-inverse) 84%, var(--ploy-neutral-primary));
+  --ploy-neutral-inverse-s3: color-mix(in oklch, var(--ploy-neutral-inverse) 66%, var(--ploy-neutral-primary));
+  --ploy-neutral-inverse-s4: color-mix(in oklch, var(--ploy-neutral-inverse) 48%, var(--ploy-neutral-primary));
+  --ploy-neutral-inverse-s5: color-mix(in oklch, var(--ploy-neutral-inverse) 30%, var(--ploy-neutral-primary));
+  --ploy-accent-primary: oklch(60% 0.2 250);
+  --ploy-accent-secondary: oklch(82.7% 0.109 229.19);
+  --ploy-accent-tertiary: oklch(60.3% 0.134 160.92);
+  --ploy-text-primary: oklch(0% 0 0);
+  --ploy-text-secondary: var(--ploy-neutral-inverse-s2);
+  --ploy-text-inverse: var(--ploy-neutral-primary);
+  --ploy-text-inverse-secondary: color-mix(in srgb, var(--ploy-neutral-primary) 60%, transparent);
+  --ploy-button-primary-background: oklch(60% 0.2 250);
+  --ploy-button-primary-text: var(--ploy-background-inverse);
+  --ploy-button-primary-border: var(--ploy-neutral-primary-s4);
+  --ploy-button-secondary-background: var(--ploy-background-primary);
+  --ploy-button-secondary-text: oklch(54.6% 0.246 262.87);
+  --ploy-button-secondary-border: oklch(70.4% 0.158 253.62);
+  --ploy-background-primary: var(--ploy-neutral-primary-s1);
+  --ploy-background-secondary: var(--ploy-neutral-secondary);
+  --ploy-background-inverse: var(--ploy-neutral-inverse-s1);
+  --ploy-border-primary: var(--ploy-neutral-primary-s5);
+  --ploy-border-inverse: color-mix(in srgb, var(--ploy-neutral-inverse-s0) 20%, transparent);
+  --ploy-neutral-primary-50: oklch(98% 0 108.84);
+  --ploy-neutral-primary-100: oklch(95.5% 0.003 106.01);
+  --ploy-accent-primary-50: oklch(97% 0.014 254.61);
+  --ploy-accent-primary-100: oklch(93.2% 0.034 254.65);
+  --ploy-accent-primary-200: oklch(87% 0.067 254.45);
+  --ploy-accent-primary-300: oklch(79.3% 0.111 254.25);
+  --ploy-accent-primary-400: oklch(70.5% 0.161 254.05);
+  --ploy-accent-primary-500: oklch(60.7% 0.192 253.85);
+  --ploy-accent-primary-600: oklch(55.8% 0.167 253.85);
+  --ploy-accent-primary-700: oklch(48.7% 0.148 253.85);
+  --ploy-accent-primary-800: oklch(40.3% 0.117 253.85);
+  --ploy-accent-primary-900: oklch(31% 0.084 253.85);
+  --ploy-accent-primary-950: oklch(21% 0.034 263.44);
+  --ploy-accent-secondary-500: oklch(82.7% 0.109 229.19);
+  --ploy-accent-tertiary-700: oklch(50% 0.11 160.92);
 }
 
 .dark {
@@ -172,6 +225,42 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  /* Landing page design tokens */
+  --font-heading: var(--font-heading);
+  --font-button: var(--font-button);
+  --color-ploy-background-primary: var(--ploy-background-primary);
+  --color-ploy-background-secondary: var(--ploy-background-secondary);
+  --color-ploy-background-inverse: var(--ploy-background-inverse);
+  --color-ploy-text-primary: var(--ploy-text-primary);
+  --color-ploy-text-secondary: var(--ploy-text-secondary);
+  --color-ploy-text-inverse: var(--ploy-text-inverse);
+  --color-ploy-text-inverse-secondary: var(--ploy-text-inverse-secondary);
+  --color-ploy-accent-primary: var(--ploy-accent-primary);
+  --color-ploy-accent-primary-500: var(--ploy-accent-primary-500);
+  --color-ploy-accent-primary-700: var(--ploy-accent-primary-700);
+  --color-ploy-accent-primary-800: var(--ploy-accent-primary-800);
+  --color-ploy-accent-primary-950: var(--ploy-accent-primary-950);
+  --color-ploy-accent-secondary: var(--ploy-accent-secondary);
+  --color-ploy-accent-tertiary: var(--ploy-accent-tertiary);
+  --color-ploy-accent-tertiary-700: var(--ploy-accent-tertiary-700);
+  --color-ploy-border-primary: var(--ploy-border-primary);
+  --color-ploy-border-inverse: var(--ploy-border-inverse);
+  --color-ploy-button-primary-background: var(--ploy-button-primary-background);
+  --color-ploy-button-primary-text: var(--ploy-button-primary-text);
+  --color-ploy-button-primary-border: var(--ploy-button-primary-border);
+  --color-ploy-button-secondary-background: var(--ploy-button-secondary-background);
+  --color-ploy-button-secondary-text: var(--ploy-button-secondary-text);
+  --color-ploy-button-secondary-border: var(--ploy-button-secondary-border);
+  --color-ploy-neutral-primary: var(--ploy-neutral-primary);
+  --color-ploy-neutral-primary-100: var(--ploy-neutral-primary-100);
+  --color-ploy-neutral-primary-s0: var(--ploy-neutral-primary-s0);
+  --color-ploy-neutral-primary-s2: var(--ploy-neutral-primary-s2);
+  --color-ploy-neutral-inverse-s0: var(--ploy-neutral-inverse-s0);
+  --color-ploy-neutral-inverse-s1: var(--ploy-neutral-inverse-s1);
+  --color-ploy-neutral-inverse-s2: var(--ploy-neutral-inverse-s2);
+  --color-ploy-neutral-inverse-s3: var(--ploy-neutral-inverse-s3);
+  --color-ploy-neutral-inverse-s4: var(--ploy-neutral-inverse-s4);
 }
 
 @layer base {
@@ -260,4 +349,40 @@
   .apple-press, .bento-card {
     transition: opacity 150ms ease !important;
   }
+}
+
+/* Otogent Display Typography */
+.font-otogent-display {
+  font-optical-sizing: auto;
+  font-variation-settings: "wght" 760;
+  font-feature-settings: "ss01" 1, "ss02" 1, "cv01" 1, "cv09" 1;
+  letter-spacing: -0.072em;
+  text-rendering: geometricprecision;
+  font-family: var(--font-sans, Geist, sans-serif);
+}
+
+.font-otogent-wordmark {
+  font-optical-sizing: auto;
+  font-variation-settings: "wght" 650;
+  font-feature-settings: "ss01" 1, "cv01" 1;
+  letter-spacing: -0.055em;
+  text-rendering: geometricprecision;
+  font-family: var(--font-sans, Geist, sans-serif);
+}
+
+/* Lenis Smooth Scrolling */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
 }
