@@ -62,6 +62,11 @@ const credentialTypeOptions = [
         label: "Gemini",
         logo: "/gemini.svg",
     },
+    {
+        value: CredentialType.TELEGRAM,
+        label: "Telegram",
+        logo: "/telegram.svg",
+    },
 ];
 
 interface CredentialFormProps {
