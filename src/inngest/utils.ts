@@ -116,6 +116,9 @@ export const sendWorkflowExecution = async (data: {
     workflowId: string;
     [key: string]: any;
 }) => {
+    if (!process.env.INNGEST_EVENT_KEY && process.env.NODE_ENV === "production") {
+        return await runWorkflowDirectly(data.workflowId, data.initialData || {});
+    }
     try {
         return await inngest.send({
             name: "workflows/execute.workflow",
