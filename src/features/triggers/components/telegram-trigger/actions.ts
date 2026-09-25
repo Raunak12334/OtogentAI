@@ -40,7 +40,11 @@ export async function connectTelegramWebhook({
     return { success: false, error: "Bot token is required" };
   }
 
-  const cleanBaseUrl = webhookBaseUrl.trim().replace(/\/+$/, "");
+  let cleanBaseUrl = webhookBaseUrl.trim().replace(/\/+$/, "");
+  if (cleanBaseUrl.includes("otogent.com") && !cleanBaseUrl.includes("www.otogent.com")) {
+    cleanBaseUrl = cleanBaseUrl.replace("https://otogent.com", "https://www.otogent.com");
+  }
+
   if (!cleanBaseUrl.startsWith("https://")) {
     return {
       success: false,
