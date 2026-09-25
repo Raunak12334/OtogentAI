@@ -113,6 +113,8 @@ enum NodeType {
   TELEGRAM_ACTION
   GOOGLE_FORM_TRIGGER
   STRIPE_TRIGGER
+  WHATSAPP_TRIGGER
+  WHATSAPP_ACTION
 }
 
 model Node {
@@ -140,6 +142,7 @@ enum CredentialType {
   ANTHROPIC
   GEMINI
   TELEGRAM
+  WHATSAPP
 }
 
 model Connection{
