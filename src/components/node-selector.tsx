@@ -41,6 +41,12 @@ const triggerNodes: NodeTypeOption[] = [
         description: "Runs when a message or command is sent to your Telegram bot",
         icon: "/telegram.svg",
     },
+    {
+        type: NodeType.WHATSAPP_TRIGGER,
+        label: "WhatsApp Trigger",
+        description: "Runs when a WhatsApp message arrives via the Business Cloud API",
+        icon: "/whatsapp.svg",
+    },
 ];
 
 const executionNodes: NodeTypeOption[] = [
@@ -60,6 +66,17 @@ const executionNodes: NodeTypeOption[] = [
             authType: "inherit",
             chatId: "{{telegram.chatId}}",
             parseMode: "HTML",
+        },
+    },
+    {
+        type: NodeType.WHATSAPP_ACTION,
+        label: "Send WhatsApp Message",
+        description: "Send a text message to a WhatsApp number",
+        icon: "/whatsapp.svg",
+        initialData: {
+            variableName: "whatsappResponse",
+            authType: "inherit",
+            recipientPhone: "{{whatsapp.from}}",
         },
     },
     {

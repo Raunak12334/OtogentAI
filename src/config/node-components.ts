@@ -6,8 +6,10 @@ import { GeminiNode } from "@/features/executions/components/gemini/node";
 import { HttpRequestNode } from "@/features/executions/components/http-request/node";
 import { OpenAINode } from "@/features/executions/components/openai/node";
 import { TelegramActionNode } from "@/features/executions/components/telegram/node";
+import { WhatsAppActionNode } from "@/features/executions/components/whatsapp/node";
 import { ManualTriggerNode } from "@/features/triggers/components/manual-trigger/node";
 import { TelegramTriggerNode } from "@/features/triggers/components/telegram-trigger/node";
+import { WhatsAppTriggerNode } from "@/features/triggers/components/whatsapp-trigger/node";
 import { NodeType } from "@/generated/prisma/enums";
 
 export const nodeComponents = {
@@ -20,6 +22,9 @@ export const nodeComponents = {
   [NodeType.GEMINI]: GeminiNode,
   [NodeType.TELEGRAM_TRIGGER]: TelegramTriggerNode,
   [NodeType.TELEGRAM_ACTION]: TelegramActionNode,
+  [NodeType.WHATSAPP_TRIGGER]: WhatsAppTriggerNode,
+  [NodeType.WHATSAPP_ACTION]: WhatsAppActionNode,
 } as const satisfies NodeTypes;
 
 export type RegisteredNodeTypes = keyof typeof nodeComponents;
+
