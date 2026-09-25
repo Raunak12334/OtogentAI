@@ -7,23 +7,13 @@ export const topologicalSort = (
     nodes: Node[],
     connections: Connection[],
 ): Node[] => {
-    if (connections.length === 0) {
-        return nodes;
-    }
+    if (nodes.length === 0) return [];
+    if (connections.length === 0) return nodes;
 
-    const edges: [string, string][] = connections.map((conn) => [conn.fromNodeId, conn.toNodeId]);
-    const connectionNodeIds = new Set<string>();
-    for (const conn of connections) {
-        connectionNodeIds.add(conn.fromNodeId);
-        connectionNodeIds.add(conn.toNodeId);
-    }
-
-
-    for (const node of nodes) {
-        if (!connectionNodeIds.has(node.id)) {
-            edges.push([node.id, node.id])
-        }
-    }
+    const edges: [string, string][] = connections.map((conn) => [
+        conn.fromNodeId,
+        conn.toNodeId,
+    ]);
 
     let sortedNodeIds: string[];
     try {
@@ -37,7 +27,16 @@ export const topologicalSort = (
     }
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    return sortedNodeIds.map((id) => nodeMap.get(id)!).filter(Boolean);
+    const sortedNodes = sortedNodeIds
+        .map((id) => nodeMap.get(id)!)
+        .filter(Boolean);
+
+    const sortedNodeIdsSet = new Set(sortedNodeIds);
+    const unconnectedNodes = nodes.filter(
+        (node) => !sortedNodeIdsSet.has(node.id)
+    );
+
+    return [...sortedNodes, ...unconnectedNodes];
 };
 
 export const sendWorkflowExecution = async (data: {
