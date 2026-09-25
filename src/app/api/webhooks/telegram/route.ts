@@ -96,6 +96,32 @@ export async function POST(request: NextRequest) {
       commandArgs = parts.slice(1).join(" ");
     }
 
+    let fileId = "";
+    if (Array.isArray(msg.photo) && msg.photo.length > 0) {
+      fileId = msg.photo[msg.photo.length - 1]?.file_id || "";
+    } else if (msg.document?.file_id) {
+      fileId = msg.document.file_id;
+    }
+
+    let filePath = "";
+    let fileUrl = "";
+    if (fileId && nodeData.botToken) {
+      try {
+        const fileRes = await fetch(
+          `https://api.telegram.org/bot${nodeData.botToken}/getFile?file_id=${fileId}`
+        );
+        if (fileRes.ok) {
+          const fileJson = await fileRes.json();
+          if (fileJson.ok && fileJson.result?.file_path) {
+            filePath = fileJson.result.file_path;
+            fileUrl = `https://api.telegram.org/file/bot${nodeData.botToken}/${filePath}`;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch Telegram file URL:", err);
+      }
+    }
+
     const telegramData = {
       messageId: msg.message_id,
       chatId: String(msg.chat.id),
@@ -104,6 +130,9 @@ export async function POST(request: NextRequest) {
       text: rawText,
       command,
       commandArgs,
+      fileId,
+      filePath,
+      fileUrl,
       sender: {
         id: msg.from?.id,
         username: msg.from?.username || "",
