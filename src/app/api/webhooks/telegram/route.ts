@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const nodeData = (node.data || {}) as {
       secretToken?: string;
       commandFilter?: string;
+      botToken?: string;
     };
 
     // Authenticate secret token if configured
