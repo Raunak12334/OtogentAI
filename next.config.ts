@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
     ],
   },
   reactCompiler: true,
+  async redirects() {
+    return [
+      {
+        source: "/dashboard",
+        destination: "/workflows",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

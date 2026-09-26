@@ -13,6 +13,7 @@ export type TelegramActionNodeData = {
   chatId?: string;
   text?: string;
   parseMode?: "HTML" | "MarkdownV2" | "Markdown" | "None";
+  [key: string]: unknown;
 };
 
 export const telegramActionExecutor: NodeExecutor<

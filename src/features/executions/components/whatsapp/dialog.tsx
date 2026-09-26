@@ -36,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { CredentialType } from "@/generated/prisma/enums";
 import { useTRPC } from "@/trpc/client";
-import type { TelegramActionNodeData } from "./executor";
+import type { WhatsAppActionNodeData } from "./executor";
 
 const formSchema = z.object({
   variableName: z
@@ -48,22 +48,22 @@ const formSchema = z.object({
     }),
   authType: z.enum(["inherit", "credential", "custom"]),
   credentialId: z.string().optional(),
-  botToken: z.string().optional(),
-  chatId: z.string().min(1, { message: "Chat ID is required" }),
+  accessToken: z.string().optional(),
+  phoneNumberId: z.string().optional(),
+  recipientPhone: z.string().min(1, { message: "Recipient phone number is required" }),
   text: z.string().min(1, { message: "Message text is required" }),
-  parseMode: z.enum(["HTML", "MarkdownV2", "Markdown", "None"]),
 });
 
-export type TelegramActionFormValues = z.infer<typeof formSchema>;
+export type WhatsAppActionFormValues = z.infer<typeof formSchema>;
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: TelegramActionFormValues) => void;
-  defaultValues?: Partial<TelegramActionNodeData>;
+  onSubmit: (values: WhatsAppActionFormValues) => void;
+  defaultValues?: Partial<WhatsAppActionNodeData>;
 }
 
-export const TelegramActionDialog = ({
+export const WhatsAppActionDialog = ({
   open,
   onOpenChange,
   onSubmit,
@@ -72,42 +72,42 @@ export const TelegramActionDialog = ({
   const trpc = useTRPC();
   const { data: credentials } = useQuery({
     ...trpc.credentials.getByType.queryOptions({
-      type: CredentialType.TELEGRAM,
+      type: CredentialType.WHATSAPP,
     }),
     enabled: open,
   });
 
-  const form = useForm<TelegramActionFormValues>({
+  const form = useForm<WhatsAppActionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      variableName: defaultValues.variableName || "telegramResponse",
+      variableName: defaultValues.variableName || "whatsappResponse",
       authType: defaultValues.authType || "inherit",
       credentialId: defaultValues.credentialId || "",
-      botToken: defaultValues.botToken || "",
-      chatId: defaultValues.chatId || "{{telegram.chatId}}",
+      accessToken: defaultValues.accessToken || "",
+      phoneNumberId: defaultValues.phoneNumberId || "",
+      recipientPhone: defaultValues.recipientPhone || "{{whatsapp.from}}",
       text: defaultValues.text || "",
-      parseMode: defaultValues.parseMode || "HTML",
     },
   });
 
   const authType = form.watch("authType");
-  const watchVariableName = form.watch("variableName") || "telegramResponse";
+  const watchVariableName = form.watch("variableName") || "whatsappResponse";
 
   useEffect(() => {
     if (open) {
       form.reset({
-        variableName: defaultValues.variableName || "telegramResponse",
+        variableName: defaultValues.variableName || "whatsappResponse",
         authType: defaultValues.authType || "inherit",
         credentialId: defaultValues.credentialId || "",
-        botToken: defaultValues.botToken || "",
-        chatId: defaultValues.chatId || "{{telegram.chatId}}",
+        accessToken: defaultValues.accessToken || "",
+        phoneNumberId: defaultValues.phoneNumberId || "",
+        recipientPhone: defaultValues.recipientPhone || "{{whatsapp.from}}",
         text: defaultValues.text || "",
-        parseMode: defaultValues.parseMode || "HTML",
       });
     }
   }, [open, defaultValues, form]);
 
-  const handleSubmit = (values: TelegramActionFormValues) => {
+  const handleSubmit = (values: WhatsAppActionFormValues) => {
     onSubmit(values);
     onOpenChange(false);
   };
@@ -118,16 +118,17 @@ export const TelegramActionDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Image
-              src="/telegram.svg"
-              alt="Telegram"
+              src="/whatsapp.svg"
+              alt="WhatsApp"
               width={20}
               height={20}
               className="size-5"
             />
-            Send Telegram Message
+            Send WhatsApp Message
           </DialogTitle>
           <DialogDescription>
-            Send a message to a Telegram chat or reply to an incoming trigger.
+            Send a text message to a WhatsApp number or reply to an incoming
+            trigger.
           </DialogDescription>
         </DialogHeader>
 
@@ -144,7 +145,7 @@ export const TelegramActionDialog = ({
                 <FormItem>
                   <FormLabel>Variable Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="telegramResponse" {...field} />
+                    <Input placeholder="whatsappResponse" {...field} />
                   </FormControl>
                   <FormDescription>
                     The name used to access the result in downstream nodes:{" "}
@@ -161,7 +162,7 @@ export const TelegramActionDialog = ({
               name="authType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bot Token Authentication</FormLabel>
+                  <FormLabel>Access Token Authentication</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -173,13 +174,13 @@ export const TelegramActionDialog = ({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="inherit">
-                        Use Bot Token from Telegram Trigger (Workflow)
+                        Use Token from WhatsApp Trigger (Workflow)
                       </SelectItem>
                       <SelectItem value="credential">
                         Use Saved Credential
                       </SelectItem>
                       <SelectItem value="custom">
-                        Enter Custom Bot Token
+                        Enter Custom Access Token
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -199,26 +200,26 @@ export const TelegramActionDialog = ({
                 name="credentialId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telegram Credential</FormLabel>
+                    <FormLabel>WhatsApp Credential</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a Telegram credential" />
+                          <SelectValue placeholder="Select a WhatsApp credential" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {credentials && credentials.length > 0 ? (
-                          credentials.map((cred: { id: string; name: string }) => (
+                          credentials.map((cred) => (
                             <SelectItem key={cred.id} value={cred.id}>
                               {cred.name}
                             </SelectItem>
                           ))
                         ) : (
                           <div className="p-2 text-xs text-muted-foreground">
-                            No Telegram credentials found.{" "}
+                            No WhatsApp credentials found.{" "}
                             <Link
                               href="/credentials"
                               className="text-primary underline"
@@ -235,23 +236,23 @@ export const TelegramActionDialog = ({
               />
             )}
 
-            {/* Custom Bot Token */}
+            {/* Custom Access Token */}
             {authType === "custom" && (
               <FormField
                 control={form.control}
-                name="botToken"
+                name="accessToken"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bot Token</FormLabel>
+                    <FormLabel>Access Token</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                        placeholder="EAAxxxxxxx..."
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Token provided by @BotFather.
+                      Permanent access token from Meta Developer Portal.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -259,58 +260,46 @@ export const TelegramActionDialog = ({
               />
             )}
 
-            {/* Chat ID */}
+            {/* Phone Number ID */}
             <FormField
               control={form.control}
-              name="chatId"
+              name="phoneNumberId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Chat ID</FormLabel>
+                  <FormLabel>Phone Number ID (optional if inherited)</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="{{telegram.chatId}}"
+                      placeholder="1234567890"
                       className="font-mono text-sm"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Target Telegram chat ID. Use{" "}
-                    <code>{"{{telegram.chatId}}"}</code> to reply to incoming
-                    messages.
+                    The WhatsApp Business phone number ID to send from. Leave
+                    empty to inherit from the trigger node.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Parse Mode */}
+            {/* Recipient Phone */}
             <FormField
               control={form.control}
-              name="parseMode"
+              name="recipientPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Parse Mode</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select formatting mode" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="HTML">HTML</SelectItem>
-                      <SelectItem value="MarkdownV2">MarkdownV2</SelectItem>
-                      <SelectItem value="Markdown">
-                        Markdown (Legacy)
-                      </SelectItem>
-                      <SelectItem value="None">Plain Text (None)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Recipient Phone Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="{{whatsapp.from}}"
+                      className="font-mono text-sm"
+                      {...field}
+                    />
+                  </FormControl>
                   <FormDescription>
-                    Format formatting tags (e.g.{" "}
-                    <code>&lt;b&gt;bold&lt;/b&gt;</code> in HTML).
+                    Target phone number in E.164 format (e.g. 14155238886). Use{" "}
+                    <code>{"{{whatsapp.from}}"}</code> to reply to the sender.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -326,7 +315,7 @@ export const TelegramActionDialog = ({
                   <FormLabel>Message Content</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Hello {{telegram.sender.firstName}}! Your response is:&#10;{{openAIResponse.text}}"
+                      placeholder={"Hello {{whatsapp.name}}! Your response is:\n{{openAIResponse.text}}"}
                       rows={5}
                       className="font-mono text-sm"
                       {...field}
@@ -344,15 +333,13 @@ export const TelegramActionDialog = ({
             <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Common Variables:</p>
               <p>
-                <code>{"{{telegram.chatId}}"}</code> - Incoming chat ID
+                <code>{"{{whatsapp.from}}"}</code> - Sender&apos;s phone number
               </p>
               <p>
-                <code>{"{{telegram.text}}"}</code> - User&apos;s incoming
-                message
+                <code>{"{{whatsapp.text}}"}</code> - Sender&apos;s message text
               </p>
               <p>
-                <code>{"{{telegram.sender.username}}"}</code> - Sender&apos;s
-                username
+                <code>{"{{whatsapp.name}}"}</code> - Sender&apos;s profile name
               </p>
               <p>
                 <code>{"{{openAIResponse.text}}"}</code> or{" "}
