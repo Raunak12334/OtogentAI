@@ -5,6 +5,7 @@ import { httpRequestExecutor } from "@/features/executions/components/http-reque
 import { openaiExecutor } from "@/features/executions/components/openai/executor";
 import { telegramActionExecutor } from "@/features/executions/components/telegram/executor";
 import { whatsappActionExecutor } from "@/features/executions/components/whatsapp/executor";
+import { googleFormTriggerExecutor } from "@/features/triggers/components/google-form-trigger/executor";
 import { manualTriggerExecutor } from "@/features/triggers/components/manual-trigger/executor";
 import { telegramTriggerExecutor } from "@/features/triggers/components/telegram-trigger/executor";
 import { whatsappTriggerExecutor } from "@/features/triggers/components/whatsapp-trigger/executor";
@@ -23,6 +24,7 @@ export const executorRegistry: Partial<Record<NodeType, NodeExecutor>> = {
   [NodeType.TELEGRAM_ACTION]: telegramActionExecutor,
   [NodeType.WHATSAPP_TRIGGER]: whatsappTriggerExecutor,
   [NodeType.WHATSAPP_ACTION]: whatsappActionExecutor,
+  [NodeType.GOOGLE_FORM_TRIGGER]: googleFormTriggerExecutor,
 };
 
 export const getExecutor = (type: NodeType): NodeExecutor => {
@@ -32,4 +34,3 @@ export const getExecutor = (type: NodeType): NodeExecutor => {
   }
   return executor;
 };
-
