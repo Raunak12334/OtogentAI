@@ -124,6 +124,18 @@ export const composioActionExecutor: NodeExecutor<ComposioActionData> = async ({
                     }
                 }
 
+                // Auto-default common required parameters for seamless execution
+                if (data.toolkitSlug === "gmail" || data.actionSlug?.toLowerCase().includes("gmail")) {
+                    if (!resolvedArgs.user_id || resolvedArgs.user_id === "") {
+                        resolvedArgs.user_id = "me";
+                    }
+                }
+                if (data.toolkitSlug === "googlesheets" || data.actionSlug?.toLowerCase().includes("googlesheets")) {
+                    if (!resolvedArgs.valueInputOption && !resolvedArgs.value_input_option) {
+                        resolvedArgs.valueInputOption = "USER_ENTERED";
+                    }
+                }
+
                 const executionResponse = await composio.tools.execute(
                     data.actionSlug,
                     {
