@@ -32,14 +32,23 @@ const getBaseUrl = () => {
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
-  title: "Otogent AI - Automations & Agent",
+  title: "Otogent - Automations & Agent",
   description: "AI Automation & Agents - Business Process Automations",
+  icons: {
+    icon: [
+      { url: "/fevicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/fevicon.svg",
+    apple: "/fevicon.svg",
+  },
   openGraph: {
-    title: "Otogent AI - Automations & Agent",
+    title: "Otogent - Automations & Agent",
     description: "AI Automation & Agents - Business Process Automations",
-    url: "https://www.otogent.com",
+    url: "https://otogent.com",
     type: "website",
-    siteName: "Otogent AI",
+    siteName: "Otogent",
     images: [
       {
         url: "/og-image.png?v=3",
