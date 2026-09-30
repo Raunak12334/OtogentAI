@@ -11,7 +11,8 @@ import {
     useSuspenseToolkits,
     useInitiateConnection,
 } from "../hooks/use-integrations";
-import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon, SearchIcon } from "lucide-react";
+import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon, SearchIcon, SparklesIcon } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 const POLL_INTERVAL_MS = 2000;
@@ -157,11 +158,24 @@ export const IntegrationsList = () => {
     );
 
     // Client-side search filter
-    const filtered = (toolkits as Array<{ name: string; slug: string; meta?: { logo?: string; description?: string }; noAuth?: boolean }>) 
-        .filter((tk) =>
-            tk.name.toLowerCase().includes(search.toLowerCase()) ||
-            tk.slug.toLowerCase().includes(search.toLowerCase())
-        );
+    const filtered = (toolkits as Array<{ name: string; slug: string; meta?: { logo?: string; description?: string }; noAuth?: boolean; isBuiltIn?: boolean }>) 
+        .filter((tk) => {
+            const query = search.toLowerCase().trim();
+            if (!query) return true;
+            if (tk.name.toLowerCase().includes(query)) return true;
+            if (tk.slug.toLowerCase().includes(query)) return true;
+            if (
+                tk.slug === "microsoft_powerpoint" &&
+                (query.includes("ppt") ||
+                 query.includes("powerpoint") ||
+                 query.includes("presentation") ||
+                 query.includes("slide") ||
+                 query.includes("microsoft"))
+            ) {
+                return true;
+            }
+            return false;
+        });
 
     return (
         <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -190,7 +204,8 @@ export const IntegrationsList = () => {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {filtered.map((toolkit) => {
-                        const isConnected = connectedSlugs.has(toolkit.slug.toLowerCase());
+                        const isBuiltIn = Boolean(toolkit.isBuiltIn);
+                        const isConnected = isBuiltIn || connectedSlugs.has(toolkit.slug.toLowerCase());
                         const isConnecting = connectingSlug === toolkit.slug;
 
                         return (
@@ -226,10 +241,18 @@ export const IntegrationsList = () => {
 
                                 {/* Footer: badge + button */}
                                 <div className="flex items-center justify-between mt-auto pt-1 gap-2">
-                                    {isConnected ? (
+                                    {isBuiltIn ? (
                                         <Badge
                                             variant="outline"
-                                            className="text-emerald-600 border-emerald-300 gap-1"
+                                            className="text-primary border-primary/30 bg-primary/5 gap-1 font-normal text-xs"
+                                        >
+                                            <SparklesIcon className="size-3" />
+                                            Built-in
+                                        </Badge>
+                                    ) : isConnected ? (
+                                        <Badge
+                                            variant="outline"
+                                            className="text-emerald-600 border-emerald-300 gap-1 font-normal text-xs"
                                         >
                                             <CheckCircle2Icon className="size-3" />
                                             Connected
@@ -238,27 +261,40 @@ export const IntegrationsList = () => {
                                         <span />
                                     )}
 
-                                    <Button
-                                        size="sm"
-                                        variant={isConnected ? "outline" : "default"}
-                                        disabled={isConnected || isConnecting}
-                                        onClick={() => handleConnect(toolkit.slug)}
-                                        className="gap-1 shrink-0"
-                                    >
-                                        {isConnecting ? (
-                                            <>
-                                                <Loader2Icon className="size-3 animate-spin" />
-                                                Connecting...
-                                            </>
-                                        ) : isConnected ? (
-                                            "Connected"
-                                        ) : (
-                                            <>
-                                                Connect
-                                                <ExternalLinkIcon className="size-3" />
-                                            </>
-                                        )}
-                                    </Button>
+                                    {isBuiltIn ? (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            asChild
+                                            className="gap-1 shrink-0"
+                                        >
+                                            <Link href="/workflows">
+                                                Use in Flow
+                                            </Link>
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant={isConnected ? "outline" : "default"}
+                                            disabled={isConnected || isConnecting}
+                                            onClick={() => handleConnect(toolkit.slug)}
+                                            className="gap-1 shrink-0"
+                                        >
+                                            {isConnecting ? (
+                                                <>
+                                                    <Loader2Icon className="size-3 animate-spin" />
+                                                    Connecting...
+                                                </>
+                                            ) : isConnected ? (
+                                                "Connected"
+                                            ) : (
+                                                <>
+                                                    Connect
+                                                    <ExternalLinkIcon className="size-3" />
+                                                </>
+                                            )}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         );

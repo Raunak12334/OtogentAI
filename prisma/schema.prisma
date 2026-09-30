@@ -115,6 +115,7 @@ enum NodeType {
   STRIPE_TRIGGER
   WHATSAPP_TRIGGER
   WHATSAPP_ACTION
+  POWERPOINT
 }
 
 model Node {
