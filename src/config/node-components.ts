@@ -11,6 +11,7 @@ import { GoogleFormTriggerNode } from "@/features/triggers/components/google-for
 import { ManualTriggerNode } from "@/features/triggers/components/manual-trigger/node";
 import { TelegramTriggerNode } from "@/features/triggers/components/telegram-trigger/node";
 import { WhatsAppTriggerNode } from "@/features/triggers/components/whatsapp-trigger/node";
+import { PowerPointNode } from "@/features/executions/components/powerpoint/node";
 import { NodeType } from "@/generated/prisma/enums";
 
 export const nodeComponents = {
@@ -26,6 +27,7 @@ export const nodeComponents = {
   [NodeType.WHATSAPP_TRIGGER]: WhatsAppTriggerNode,
   [NodeType.WHATSAPP_ACTION]: WhatsAppActionNode,
   [NodeType.GOOGLE_FORM_TRIGGER]: GoogleFormTriggerNode,
+  [NodeType.POWERPOINT]: PowerPointNode,
 } as const satisfies NodeTypes;
 
 export type RegisteredNodeTypes = keyof typeof nodeComponents;
