@@ -7,9 +7,9 @@ import { useNodeStatus } from "../../hooks/use-node-status";
 import { BaseExecutionNode } from "../base-execution-node";
 import { fetchGoogleSheetsRealtimeToken } from "./actions";
 import { GoogleSheetsDialog, type GoogleSheetsFormValues } from "./dialog";
-import type { GoogleSheetsNodeData } from "./executor";
+import type { GoogleSheetsData } from "./executor";
 
-type GoogleSheetsNodeType = Node<GoogleSheetsNodeData>;
+type GoogleSheetsNodeType = Node<GoogleSheetsData>;
 
 export const GoogleSheetsNode = memo((props: NodeProps<GoogleSheetsNodeType>) => {
   const [dialogOpen, setDialogOpen] = useState(false);
