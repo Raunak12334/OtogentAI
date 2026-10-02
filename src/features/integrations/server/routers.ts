@@ -11,30 +11,10 @@ export const integrationsRouter = createTRPCRouter({
      * Load all upfront; client-side search filters the list.
      */
     getToolkits: protectedProcedure.query(async () => {
-        let composioToolkits: Array<{ name: string; slug: string; meta?: { logo?: string; description?: string }; noAuth?: boolean }> = [];
-        try {
-            const result = await composio.toolkits.get({});
-            composioToolkits = result.filter(
-                (tk: { slug: string }) => !tk.slug.toLowerCase().includes("composio")
-            );
-        } catch {
-            composioToolkits = [];
-        }
-
-        const builtInToolkits = [
-            {
-                name: "Microsoft PowerPoint",
-                slug: "microsoft_powerpoint",
-                meta: {
-                    logo: "/powerpoint.svg",
-                    description: "Built-in: Generate professional PowerPoint (.pptx) presentations directly in your workflows from text, outlines, or AI models.",
-                },
-                isBuiltIn: true,
-                noAuth: true,
-            },
-        ];
-
-        return [...builtInToolkits, ...composioToolkits];
+        const result = await composio.toolkits.get({});
+        return result.filter(
+            (tk: { slug: string }) => !tk.slug.toLowerCase().includes("composio")
+        );
     }),
 
     /**
@@ -97,13 +77,6 @@ export const integrationsRouter = createTRPCRouter({
         .input(z.object({ toolkitSlug: z.string().min(1) }))
         .mutation(async ({ ctx, input }) => {
             const userId = ctx.auth.user.id;
-
-            if (input.toolkitSlug === "microsoft_powerpoint") {
-                return {
-                    redirectUrl: "/workflows",
-                    connectionId: "builtin-powerpoint",
-                };
-            }
 
             try {
                 const connectionRequest = await composio.toolkits.authorize(
