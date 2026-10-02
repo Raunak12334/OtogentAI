@@ -59,11 +59,11 @@ const formSchema = z.object({
   replacements: z.string().optional(),
   aiContentField: z.string().optional(),
   templateMode: z.boolean().optional(),
-  templateSlideCount: z.coerce.number().min(1).max(100).optional(),
+  templateSlideCount: z.number().min(1).max(100).optional(),
   generatedSlideAction: z.enum(["replace", "append"]).optional(),
   newPresentationTitle: z.string().optional(),
   targetFolderId: z.string().optional(),
-  holdingsSlideIndex: z.coerce.number().min(0).max(100).optional(),
+  holdingsSlideIndex: z.number().min(0).max(100).optional(),
 });
 
 export type GoogleSlidesFormValues = z.infer<typeof formSchema>;
@@ -301,6 +301,11 @@ export const GoogleSlidesDialog = ({
                           placeholder="3"
                           {...field}
                           value={field.value ?? 3}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === "" ? undefined : Number(e.target.value),
+                            )
+                          }
                         />
                       </FormControl>
                       <FormDescription className="text-[11px]">
@@ -417,6 +422,11 @@ export const GoogleSlidesDialog = ({
                       placeholder="3"
                       {...field}
                       value={field.value ?? 3}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                        )
+                      }
                     />
                   </FormControl>
                   <FormDescription className="text-xs">

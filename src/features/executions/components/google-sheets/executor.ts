@@ -4,14 +4,17 @@ import type { NodeExecutor } from "@/features/executions/types";
 import { googleSheetsChannel } from "@/inngest/channels/google-sheets";
 import prisma from "@/lib/db";
 
-export interface GoogleSheetsData {
+export type GoogleSheetsData = {
   variableName?: string;
   credentialId?: string;
   spreadsheetId?: string;
   sheetName?: string;
   range?: string;
   includeHeaders?: boolean;
-}
+  [key: string]: unknown;
+};
+
+export type GoogleSheetsNodeData = GoogleSheetsData;
 
 export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
   data,

@@ -52,7 +52,7 @@ function buildReplaceShapeTextRequests(
   return reqs;
 }
 
-export interface GoogleSlidesData {
+export type GoogleSlidesData = {
   variableName?: string;
   credentialId?: string;
   presentationId?: string;
@@ -73,7 +73,10 @@ export interface GoogleSlidesData {
    * Set to 0 to search all slides.
    */
   holdingsSlideIndex?: number;
-}
+  [key: string]: unknown;
+};
+
+export type GoogleSlidesNodeData = GoogleSlidesData;
 
 function buildReplacementMap(
   replacementsConfig: string | undefined,
