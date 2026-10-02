@@ -38,7 +38,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const GEMINI_MODELS = [
-    { value: "gemini-3.6-flash", label: "Gemini 3.6 Flash (Latest, Fast & Advanced)" },
+    { value: "gemini-3.8-flash", label: "Gemini 3.8 Flash (Latest, Fast & Advanced)" },
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
     { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Deep Reasoning)" },
 ] as const;

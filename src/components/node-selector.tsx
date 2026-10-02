@@ -126,6 +126,27 @@ const executionNodes: NodeTypeOption[] = [
       content: "# Slide 1: Executive Summary\n- High-level business overview\n- Key strategic deliverables\n\n# Slide 2: Market Analysis\n- Growing user adoption\n- Scalable automation architecture",
     },
   },
+  {
+    type: NodeType.GOOGLE_SHEETS,
+    label: "Google Sheets",
+    description: "Read data from a Google Spreadsheet and pass it to AI or Slides nodes",
+    icon: "/googlesheets.svg",
+    initialData: {
+      variableName: "sheetsData",
+      sheetName: "Sheet1",
+      range: "A1:Z1000",
+      includeHeaders: true,
+    },
+  },
+  {
+    type: NodeType.GOOGLE_SLIDES,
+    label: "Google Slides",
+    description: "Replace {{placeholders}} in a pre-built Google Slides presentation with real data",
+    icon: "/googleslides.svg",
+    initialData: {
+      variableName: "slidesResult",
+    },
+  },
 ];
 
 interface NodeSelectorProps {

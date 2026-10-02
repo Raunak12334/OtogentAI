@@ -14,6 +14,79 @@ export type GeminiNodeData = {
     userPrompt?: string;
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Returns true for transient overload / rate-limit errors that are worth retrying */
+function isOverloadError(err: unknown): boolean {
+    const msg = String(err instanceof Error ? err.message : err).toLowerCase();
+    return (
+        msg.includes("high demand") ||
+        msg.includes("overloaded") ||
+        msg.includes("rate limit") ||
+        msg.includes("resource_exhausted") ||
+        msg.includes("quota") ||
+        msg.includes("503") ||
+        msg.includes("429")
+    );
+}
+
+/** Sleep for `ms` milliseconds */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Call `fn` with exponential backoff on overload errors.
+ * Retries up to `maxAttempts - 1` times with delays: 2s, 4s, 8s …
+ */
+async function withBackoff<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 4,
+    baseDelayMs = 2000,
+): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastError = err;
+            if (!isOverloadError(err) || attempt === maxAttempts) throw err;
+            const delay = baseDelayMs * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+            console.warn(
+                `[gemini] Overload error on attempt ${attempt}/${maxAttempts}. Retrying in ${delay}ms…`,
+                String(err),
+            );
+            await sleep(delay);
+        }
+    }
+    throw lastError;
+}
+
+// Fallback model chain — tried in order when the primary model is overloaded.
+// Using current available Gemini API model IDs.
+const FALLBACK_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-preview-04-17",
+];
+
+/** Map the app's display-friendly aliases → real Gemini API model IDs */
+function resolveModelName(raw: string | undefined): string {
+    const name = (raw || "gemini-3.8-flash").replace(/^models\//, "");
+    const aliases: Record<string, string> = {
+        "gemini-3.6-flash":      "gemini-3.8-flash",
+        "gemini-2.0-flash":      "gemini-3.8-flash",
+        "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+        "gemini-2.5-flash":      "gemini-2.5-flash-preview-04-17",
+        "gemini-2.5-pro":        "gemini-2.5-pro-preview-05-06",
+    };
+    return aliases[name] ?? name;
+}
+
+// ---------------------------------------------------------------------------
+// Executor
+// ---------------------------------------------------------------------------
+
 export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
     data,
     nodeId,
@@ -23,10 +96,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
     await step.realtime.publish(
         `publish-loading-${nodeId}`,
         geminiChannel.status,
-        {
-            nodeId,
-            status: "loading",
-        }
+        { nodeId, status: "loading" }
     );
 
     try {
@@ -37,10 +107,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     await step.realtime.publish(
                         `publish-error-${nodeId}`,
                         geminiChannel.status,
-                        {
-                            nodeId,
-                            status: "error",
-                        }
+                        { nodeId, status: "error" }
                     );
                     throw new NonRetriableError(
                         "Gemini node: Variable name not configured"
@@ -51,10 +118,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     await step.realtime.publish(
                         `publish-error-${nodeId}`,
                         geminiChannel.status,
-                        {
-                            nodeId,
-                            status: "error",
-                        }
+                        { nodeId, status: "error" }
                     );
                     throw new NonRetriableError(
                         "Gemini node: No credential selected"
@@ -65,10 +129,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     await step.realtime.publish(
                         `publish-error-${nodeId}`,
                         geminiChannel.status,
-                        {
-                            nodeId,
-                            status: "error",
-                        }
+                        { nodeId, status: "error" }
                     );
                     throw new NonRetriableError(
                         "Gemini node: User prompt not configured"
@@ -83,10 +144,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     await step.realtime.publish(
                         `publish-error-${nodeId}`,
                         geminiChannel.status,
-                        {
-                            nodeId,
-                            status: "error",
-                        }
+                        { nodeId, status: "error" }
                     );
                     throw new NonRetriableError(
                         "Gemini node: Selected credential not found or empty"
@@ -102,38 +160,59 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
                     ? Handlebars.compile(data.systemPrompt)(context)
                     : undefined;
 
-                let modelName = data.model || "gemini-3.6-flash";
-                if (modelName === "gemini-2.0-flash" || modelName === "models/gemini-2.0-flash") {
-                    modelName = "gemini-3.6-flash";
-                }
-                if (modelName.startsWith("models/")) {
-                    modelName = modelName.replace(/^models\//, "");
+                // Resolve the configured model alias to a real API model ID
+                const primaryModel = resolveModelName(data.model);
+
+                // Build the ordered model list: primary first, then fallbacks
+                const modelsToTry = [
+                    primaryModel,
+                    ...FALLBACK_MODELS.filter((m) => m !== primaryModel),
+                ];
+
+                let lastErr: unknown;
+                for (const modelName of modelsToTry) {
+                    try {
+                        console.log(`[gemini] Trying model: ${modelName}`);
+                        const response = await withBackoff(() =>
+                            generateText({
+                                model: google(modelName),
+                                prompt,
+                                system,
+                            })
+                        );
+
+                        return {
+                            ...context,
+                            [data.variableName]: {
+                                text: response.text,
+                                finishReason: response.finishReason,
+                                usage: response.usage,
+                                modelUsed: modelName,
+                            },
+                        };
+                    } catch (err) {
+                        lastErr = err;
+                        if (isOverloadError(err)) {
+                            console.warn(
+                                `[gemini] Model "${modelName}" overloaded after retries, trying next fallback…`
+                            );
+                            continue; // try next model in the list
+                        }
+                        throw err; // non-overload error — surface immediately
+                    }
                 }
 
-                const response = await generateText({
-                    model: google(modelName),
-                    prompt,
-                    system,
-                });
-
-                return {
-                    ...context,
-                    [data.variableName]: {
-                        text: response.text,
-                        finishReason: response.finishReason,
-                        usage: response.usage,
-                    },
-                };
+                // All models exhausted
+                throw new Error(
+                    `Gemini node: All models are currently overloaded. Last error: ${String(lastErr)}`
+                );
             }
         );
 
         await step.realtime.publish(
             `publish-success-${nodeId}`,
             geminiChannel.status,
-            {
-                nodeId,
-                status: "success",
-            }
+            { nodeId, status: "success" }
         );
 
         return result;
@@ -141,10 +220,7 @@ export const geminiExecutor: NodeExecutor<GeminiNodeData> = async ({
         await step.realtime.publish(
             `publish-error-${nodeId}`,
             geminiChannel.status,
-            {
-                nodeId,
-                status: "error",
-            }
+            { nodeId, status: "error" }
         );
         throw error;
     }

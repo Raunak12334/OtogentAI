@@ -116,6 +116,8 @@ enum NodeType {
   WHATSAPP_TRIGGER
   WHATSAPP_ACTION
   POWERPOINT
+  GOOGLE_SHEETS
+  GOOGLE_SLIDES
 }
 
 model Node {
@@ -144,6 +146,7 @@ enum CredentialType {
   GEMINI
   TELEGRAM
   WHATSAPP
+  GOOGLE
 }
 
 model Connection{
