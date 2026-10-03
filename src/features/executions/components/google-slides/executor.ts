@@ -273,7 +273,15 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
       const ctxSummary =
         (context.sheetsData as any)?.summary || (context.summary as any) || {};
 
-      // Resolved summary values — prefer Gemini aiSummary over legacy ctxSummary
+      // Deep fallback: if per-row extraction missed the return value,
+      // scan the full sheetsData.text string directly for Abs. Return.
+      // This is more reliable as it searches the entire raw text, not row-by-row.
+      if (!ctxSummary.overallReturn) {
+        const rawSheetText: string = (context.sheetsData as any)?.text ?? "";
+        const absTextMatch = rawSheetText.match(/Abs\.?\s*Return\s*:\s*(-?[\d.,]+%)/i);
+        if (absTextMatch) ctxSummary.overallReturn = absTextMatch[1].trim();
+      }
+
       const summaryData: Record<string, string> = {
         investorName: aiSummary.investorName ?? ctxSummary.investorName ?? "",
         investmentAmount:
@@ -284,9 +292,11 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
         currentValue: aiSummary.currentValue ?? ctxSummary.currentValue ?? "",
         gainLoss: aiSummary.gainLoss ?? ctxSummary.gainLoss ?? "",
         overallReturn:
-          aiSummary["Overall Return"] ??
-          aiSummary.overallReturn ??
-          ctxSummary.overallReturn ??
+          // Prefer sheet-extracted value (reliable pre-computed figure) over
+          // Gemini AI output which can hallucinate financial return calculations.
+          ctxSummary.overallReturn ||
+          aiSummary["Overall Return"] ||
+          aiSummary.overallReturn ||
           "",
         date: aiSummary.date ?? ctxSummary.date ?? "",
       };
@@ -405,13 +415,22 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
             }
           };
 
-          for (const slide of pres.data.slides || []) {
+          // Only scan slides 1..N (N = holdingsSlideIndex, default 3).
+          // Slides beyond this boundary are treated as static/protected and are
+          // never touched — no shape text is read or replaced on them.
+          const maxEditSlide = data.holdingsSlideIndex ?? 3;
+          const allSlides = pres.data.slides || [];
+          const shapeSlidesToScan =
+            maxEditSlide === 0 ? allSlides : allSlides.slice(0, maxEditSlide);
+
+          for (const slide of shapeSlidesToScan) {
             for (const el of slide.pageElements || []) {
               if (!el.shape?.text?.textElements) continue;
 
               const fullText = getShapeText(el);
               const fullTextLower = fullText.toLowerCase();
-              const lines = fullText.split("\n").map((l) => l.trim()).filter(Boolean);
+              // Split by \n or vertical tab (\x0B) used for soft-returns in Slides
+              const lines = fullText.split(/\r?\n|\x0B/).map((l) => l.trim()).filter(Boolean);
 
               // Slide 1: Date box — detect any date-like pattern and replace with new date
               if (
@@ -452,8 +471,8 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
 
               // Slide 2: Invested Amount card — replace the value line only
               if (summaryData.investmentAmount && fullTextLower.includes("invested")) {
-                const currentValue = lines[1]; // value is on line 2
-                pushReplace(currentValue, summaryData.investmentAmount);
+                const currentValue = lines[1] ?? fullText.match(/(-?₹?\s*[\d.,]+)/)?.[1];
+                if (currentValue) pushReplace(currentValue, summaryData.investmentAmount);
               }
 
               // Slide 2: Current Value card — replace the value line only
@@ -462,8 +481,8 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                 fullTextLower.includes("current value") &&
                 !fullTextLower.includes("gain")
               ) {
-                const currentValue = lines[1];
-                pushReplace(currentValue, summaryData.currentValue);
+                const currentValue = lines[1] ?? fullText.match(/(-?₹?\s*[\d.,]+)/)?.[1];
+                if (currentValue) pushReplace(currentValue, summaryData.currentValue);
               }
 
               // Slide 2: Overall Return card — replace the value line only
@@ -472,14 +491,15 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                 !fullTextLower.includes("gain") &&
                 fullTextLower.includes("return")
               ) {
-                const currentValue = lines[1];
-                pushReplace(currentValue, summaryData.overallReturn);
+                const currentValue = lines[1] ?? fullText.match(/(-?[\d.,]+%)/)?.[1];
+                console.log(`[google-slides] Found Overall Return shape. fullText: ${JSON.stringify(fullText)}, lines: ${JSON.stringify(lines)}, extracted value: ${currentValue}, summaryData.overallReturn: ${summaryData.overallReturn}`);
+                if (currentValue) pushReplace(currentValue, summaryData.overallReturn);
               }
 
               // Slide 2: Gain/Loss card — replace the value line only
               if (summaryData.gainLoss && fullTextLower.includes("gain")) {
-                const currentValue = lines[1];
-                pushReplace(currentValue, summaryData.gainLoss);
+                const currentValue = lines[1] ?? fullText.match(/(-?₹?\s*[\d.,]+)/)?.[1];
+                if (currentValue) pushReplace(currentValue, summaryData.gainLoss);
               }
             }
           }
@@ -509,16 +529,22 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
           // ── TABLE CELL UPDATES (separate batch so errors don't block cards) ──
           if (holdings.length > 0) {
             const tableRequests: any[] = [];
+            // Captures style reference for each table that needs rows inserted.
+            // Must be declared here (outer scope) so the batch section can access it.
+            const styleInfoList: Array<{
+              tableId: string;
+              existingDataRows: number;
+              sourceRow: any;
+            }> = [];
 
+            // Reuse maxEditSlide + allSlides hoisted from the shape-scan section above.
             // holdingsSlideIndex: 1-based (default 3 = slide 3). 0 = all slides.
-            const targetSlideNum = data.holdingsSlideIndex ?? 3;
-            const allSlides = pres.data.slides || [];
 
             // Build the subset of slides to scan for a holdings table
             const slidesToScan =
-              targetSlideNum === 0
+              maxEditSlide === 0
                 ? allSlides
-                : allSlides.filter((_, idx) => idx === targetSlideNum - 1);
+                : allSlides.filter((_, idx) => idx === maxEditSlide - 1);
 
             for (const slide of slidesToScan) {
               for (const el of slide.pageElements || []) {
@@ -545,7 +571,7 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   headerText.includes("holding") ||
                   headerText.includes("fund");
 
-                if (!isHoldingsTable && targetSlideNum !== 0) {
+                if (!isHoldingsTable && maxEditSlide !== 0) {
                   // Skip non-holdings tables when targeting a specific slide
                   continue;
                 }
@@ -570,6 +596,8 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                     // Suppress lint: numCols used below indirectly
                     void numCols;
                   }
+                  // Capture style reference while tableId/existingDataRows/tableRows are in scope
+                  styleInfoList.push({ tableId, existingDataRows, sourceRow: tableRows[1] ?? null });
                 }
 
                 // Populate data rows (row 0 = header, rows 1+ = data)
@@ -672,6 +700,75 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   presentationId,
                   requestBody: { requests: insertReqs },
                 });
+
+                // ── APPLY SOURCE-ROW STYLE TO NEWLY INSERTED ROWS ──
+                // insertTableRows does NOT copy cell styling — new rows always get
+                // the default (large font, transparent background). Fix: read style
+                // from the first existing data row and apply to all newly inserted rows.
+                const styleRequests: any[] = [];
+
+                for (const { tableId: tid, existingDataRows: edr, sourceRow } of styleInfoList) {
+                  const sourceCells = sourceRow?.tableCells ?? [];
+                  for (let newRowIdx = edr + 1; newRowIdx <= holdings.length; newRowIdx++) {
+                    for (let colIdx = 0; colIdx < sourceCells.length; colIdx++) {
+                      const srcCell = sourceCells[colIdx];
+
+                      // 1. Background fill colour
+                      const bgFill = (srcCell as any)?.tableCellProperties?.tableCellBackgroundFill;
+                      if (bgFill) {
+                        styleRequests.push({
+                          updateTableCellProperties: {
+                            objectId: tid,
+                            tableRange: {
+                              location: { rowIndex: newRowIdx, columnIndex: colIdx },
+                              rowSpan: 1,
+                              columnSpan: 1,
+                            },
+                            tableCellProperties: { tableCellBackgroundFill: bgFill },
+                            fields: "tableCellBackgroundFill",
+                          },
+                        });
+                      }
+
+                      // 2. Text style — font size, family, colour, bold, italic
+                      const srcTextStyle = ((srcCell as any)?.text?.textElements ?? [])
+                        .find((te: any) => te.textRun?.style)?.textRun?.style;
+                      if (srcTextStyle) {
+                        styleRequests.push({
+                          updateTextStyle: {
+                            objectId: tid,
+                            cellLocation: { rowIndex: newRowIdx, columnIndex: colIdx },
+                            style: srcTextStyle,
+                            textRange: { type: "ALL" },
+                            fields: "fontSize,foregroundColor,fontFamily,bold,italic",
+                          },
+                        });
+                      }
+
+                      // 3. Paragraph alignment
+                      const srcParaStyle = ((srcCell as any)?.text?.textElements ?? [])
+                        .find((te: any) => te.paragraphMarker?.style)?.paragraphMarker?.style;
+                      if (srcParaStyle?.alignment) {
+                        styleRequests.push({
+                          updateParagraphStyle: {
+                            objectId: tid,
+                            cellLocation: { rowIndex: newRowIdx, columnIndex: colIdx },
+                            style: { alignment: srcParaStyle.alignment },
+                            textRange: { type: "ALL" },
+                            fields: "alignment",
+                          },
+                        });
+                      }
+                    }
+                  }
+                }
+
+                if (styleRequests.length > 0) {
+                  await slides.presentations.batchUpdate({
+                    presentationId,
+                    requestBody: { requests: styleRequests },
+                  });
+                }
               }
 
               if (cellReqs.length > 0) {
