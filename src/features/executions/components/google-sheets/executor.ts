@@ -221,7 +221,10 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
           });
         }
         if (/Weighted\s*Avg/i.test(joined)) {
-          const retMatch = joined.match(/Return\s*:\s*([\d.]+%\s*)/i);
+          // Prefer Weighted Avg. Abs. Return (absolute %) — handles negative values with -?
+          const absMatch = joined.match(/Abs\.?\s*Return\s*:\s*(-?[\d.]+%)/i);
+          const annMatch = joined.match(/Ann\.?\s*Return\s*:\s*(-?[\d.]+%)/i);
+          const retMatch = absMatch ?? annMatch;
           if (retMatch) summary.overallReturn = retMatch[1].trim();
         }
       });
