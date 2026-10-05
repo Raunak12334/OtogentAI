@@ -9,6 +9,9 @@ import { googleFormTriggerExecutor } from "@/features/triggers/components/google
 import { manualTriggerExecutor } from "@/features/triggers/components/manual-trigger/executor";
 import { telegramTriggerExecutor } from "@/features/triggers/components/telegram-trigger/executor";
 import { whatsappTriggerExecutor } from "@/features/triggers/components/whatsapp-trigger/executor";
+import { powerpointExecutor } from "@/features/executions/components/powerpoint/executor";
+import { googleSheetsExecutor } from "@/features/executions/components/google-sheets/executor";
+import { googleSlidesExecutor } from "@/features/executions/components/google-slides/executor";
 import { NodeType } from "@/generated/prisma/client";
 import type { NodeExecutor } from "../types";
 
@@ -25,6 +28,9 @@ export const executorRegistry: Partial<Record<NodeType, NodeExecutor>> = {
   [NodeType.WHATSAPP_TRIGGER]: whatsappTriggerExecutor,
   [NodeType.WHATSAPP_ACTION]: whatsappActionExecutor,
   [NodeType.GOOGLE_FORM_TRIGGER]: googleFormTriggerExecutor,
+  [NodeType.POWERPOINT]: powerpointExecutor,
+  [NodeType.GOOGLE_SHEETS]: googleSheetsExecutor,
+  [NodeType.GOOGLE_SLIDES]: googleSlidesExecutor,
 };
 
 export const getExecutor = (type: NodeType): NodeExecutor => {

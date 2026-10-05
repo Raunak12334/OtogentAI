@@ -157,7 +157,7 @@ export const IntegrationsList = () => {
     );
 
     // Client-side search filter
-    const filtered = (toolkits as Array<{ name: string; slug: string; meta?: { logo?: string; description?: string }; noAuth?: boolean }>) 
+    const filtered = (toolkits as Array<{ name: string; slug: string; meta?: { logo?: string; description?: string }; noAuth?: boolean }>)
         .filter((tk) =>
             tk.name.toLowerCase().includes(search.toLowerCase()) ||
             tk.slug.toLowerCase().includes(search.toLowerCase())

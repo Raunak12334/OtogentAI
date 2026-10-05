@@ -67,6 +67,11 @@ const credentialTypeOptions = [
     label: "Telegram",
     logo: "/telegram.svg",
   },
+  {
+    value: CredentialType.GOOGLE,
+    label: "Google (Service Account)",
+    logo: "/google.svg",
+  },
 ];
 
 interface CredentialFormProps {
