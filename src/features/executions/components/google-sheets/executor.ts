@@ -3,6 +3,7 @@ import { NonRetriableError } from "inngest";
 import type { NodeExecutor } from "@/features/executions/types";
 import { googleSheetsChannel } from "@/inngest/channels/google-sheets";
 import prisma from "@/lib/db";
+import { type InvestorHolding, parseInvestorReports } from "./investor-report";
 
 export type GoogleSheetsData = {
   variableName?: string;
@@ -78,7 +79,9 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
       }
 
       // Resolve any Handlebars templates in config values
-      const rawSpreadsheetInput = Handlebars.compile(data.spreadsheetId)(context);
+      const rawSpreadsheetInput = Handlebars.compile(data.spreadsheetId)(
+        context,
+      );
       const spreadsheetId =
         rawSpreadsheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1] ??
         rawSpreadsheetInput.trim();
@@ -109,7 +112,7 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
 
       const sheets = google.sheets({ version: "v4", auth });
 
-      let response;
+      let response: { data: { values?: unknown[][] | null } };
       try {
         response = await sheets.spreadsheets.values.get({
           spreadsheetId,
@@ -141,7 +144,7 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
         } catch {
           // If fallback fails, rethrow with friendly message
           throw new NonRetriableError(
-            `Google Sheets node: Unable to read range "${fullRange}". Please verify the sheet tab name matches your spreadsheet.`
+            `Google Sheets node: Unable to read range "${fullRange}". Please verify the sheet tab name matches your spreadsheet.`,
           );
         }
       }
@@ -155,6 +158,7 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
           rows: [],
           values: [],
           text: "(Empty sheet)",
+          investors: [],
           rowCount: 0,
           columnCount: 0,
         };
@@ -162,7 +166,9 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
 
       // Format complete grid representation for downstream LLMs
       const textRepresentation = rawValues
-        .filter((r) => r.some((c) => c !== undefined && String(c).trim() !== ""))
+        .filter((r) =>
+          r.some((c) => c !== undefined && String(c).trim() !== ""),
+        )
         .map((row) => row.map((c) => String(c ?? "").trim()).join(" | "))
         .join("\n");
 
@@ -170,7 +176,9 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
       let headerRowIndex = 0;
       let maxCols = 0;
       rawValues.forEach((row, idx) => {
-        const nonEmpty = row.filter((c) => c !== undefined && String(c).trim() !== "").length;
+        const nonEmpty = row.filter(
+          (c) => c !== undefined && String(c).trim() !== "",
+        ).length;
         if (nonEmpty > maxCols) {
           maxCols = nonEmpty;
           headerRowIndex = idx;
@@ -187,7 +195,9 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
         );
         const dataRows = rawValues.slice(headerRowIndex + 1);
         rows = dataRows
-          .filter((row) => row.some((c) => c !== undefined && String(c).trim() !== ""))
+          .filter((row) =>
+            row.some((c) => c !== undefined && String(c).trim() !== ""),
+          )
           .map((row) => {
             const rowObj: Record<string, string> = {};
             headers.forEach((header, colIdx) => {
@@ -233,7 +243,8 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
       // Extract directly from rawValues using a header-row scan.
       // We cannot rely on rows[] / headers[] because the sheet has many metadata rows
       // above the actual fund table, which confuses the auto-detect logic.
-      const normalizeKey = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const normalizeKey = (k: string) =>
+        k.toLowerCase().replace(/[^a-z0-9]/g, "");
 
       // Find the row in rawValues that contains the fund table header
       // (the row with "Scheme" or "Fund" as one of its cells)
@@ -241,7 +252,9 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
       let rawHeaders: string[] = [];
       for (let i = 0; i < rawValues.length; i++) {
         const row = rawValues[i];
-        const schemeCell = row.findIndex((c) => /^scheme$/i.test(String(c ?? "").trim()));
+        const schemeCell = row.findIndex((c) =>
+          /^scheme$/i.test(String(c ?? "").trim()),
+        );
         if (schemeCell !== -1) {
           tableHeaderRowIdx = i;
           rawHeaders = row.map((c) => String(c ?? "").trim());
@@ -257,19 +270,31 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
         return -1;
       };
 
-      const schemeColIdx  = findRawColIdx(/^scheme$/, /^fund$/, /^name$/);
-      const invColIdx     = findRawColIdx(/invamt/, /investmentamount/, /invested/, /investment/);
-      const curValColIdx  = findRawColIdx(/currentvalue/, /curval/, /marketvalue/);
-      const gainColIdx    = findRawColIdx(/unrealisedgainloss/, /unrealizedgainloss/, /gainloss/);
-      const holdColIdx    = findRawColIdx(/holding$/, /holdingpercentage/, /holdingpercent/, /percent/);
+      const schemeColIdx = findRawColIdx(/^scheme$/, /^fund$/, /^name$/);
+      const invColIdx = findRawColIdx(
+        /invamt/,
+        /investmentamount/,
+        /invested/,
+        /investment/,
+      );
+      const curValColIdx = findRawColIdx(
+        /currentvalue/,
+        /curval/,
+        /marketvalue/,
+      );
+      const gainColIdx = findRawColIdx(
+        /unrealisedgainloss/,
+        /unrealizedgainloss/,
+        /gainloss/,
+      );
+      const holdColIdx = findRawColIdx(
+        /holding$/,
+        /holdingpercentage/,
+        /holdingpercent/,
+        /percent/,
+      );
 
-      const holdings: Array<{
-        schemeName: string;
-        investments: string;
-        currentValue: string;
-        "unrealisedGain/Loss": string;
-        holdingPercentage: string;
-      }> = [];
+      const holdings: InvestorHolding[] = [];
 
       if (tableHeaderRowIdx !== -1 && schemeColIdx !== -1) {
         // Data rows start immediately after the header row
@@ -277,21 +302,32 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
           const row = rawValues[i];
           const schemeName = String(row[schemeColIdx] ?? "").trim();
           // Stop at Grand Total row or empty rows
-          if (!schemeName || /^(grand\s*total|total|sub\s*total)/i.test(schemeName)) continue;
+          if (
+            !schemeName ||
+            /^(grand\s*total|total|sub\s*total)/i.test(schemeName)
+          )
+            continue;
           // Skip if it looks like a footer/note row
           if (/weighted\s*avg|note\s*:|^\s*●/i.test(schemeName)) continue;
 
           holdings.push({
             schemeName,
-            investments:           invColIdx     !== -1 ? String(row[invColIdx]     ?? "").trim() : "",
-            currentValue:          curValColIdx  !== -1 ? String(row[curValColIdx]  ?? "").trim() : "",
-            "unrealisedGain/Loss": gainColIdx    !== -1 ? String(row[gainColIdx]    ?? "").trim() : "",
-            holdingPercentage:     holdColIdx    !== -1 ? String(row[holdColIdx]    ?? "").trim() : "",
+            investments:
+              invColIdx !== -1 ? String(row[invColIdx] ?? "").trim() : "",
+            currentValue:
+              curValColIdx !== -1 ? String(row[curValColIdx] ?? "").trim() : "",
+            "unrealisedGain/Loss":
+              gainColIdx !== -1 ? String(row[gainColIdx] ?? "").trim() : "",
+            holdingPercentage:
+              holdColIdx !== -1 ? String(row[holdColIdx] ?? "").trim() : "",
           });
         }
       }
 
       const varName = data.variableName || "sheetsData";
+
+      const investors = parseInvestorReports(rawValues);
+
       const sheetResult = {
         headers,
         rows,
@@ -299,6 +335,7 @@ export const googleSheetsExecutor: NodeExecutor<GoogleSheetsData> = async ({
         text: textRepresentation,
         summary,
         holdings,
+        investors,
         rowCount: rawValues.length,
         columnCount: maxCols,
       };
