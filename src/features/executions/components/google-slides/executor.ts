@@ -50,6 +50,112 @@ function isInvestorHoldingsSlide(slide: any): boolean {
   return false;
 }
 
+/** Split an array of holdings into chunks of given pageSize (at least 1 chunk) */
+function chunkHoldings<T>(items: T[], size: number): T[][] {
+  if (!items || items.length === 0) return [[]];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks.length > 0 ? chunks : [[]];
+}
+
+/** Build cell text deletion and insertion requests to populate a holdings table chunk */
+function buildPopulateTableRequests(
+  tableElement: any,
+  holdingsChunk: Array<{
+    schemeName?: string;
+    investments?: string;
+    currentValue?: string;
+    "unrealisedGain/Loss"?: string;
+    gainLoss?: string;
+    holdingPercentage?: string;
+  }>,
+): slides_v1.Schema$Request[] {
+  const tableId = tableElement.objectId as string;
+  const tableRows = tableElement.table?.tableRows ?? [];
+  const requests: slides_v1.Schema$Request[] = [];
+
+  // Populate data rows (row 0 is header, rows 1..N are data)
+  for (let i = 0; i < holdingsChunk.length && i + 1 < tableRows.length; i++) {
+    const rowIdx = i + 1;
+    const holding = holdingsChunk[i];
+    const cells = tableRows[rowIdx]?.tableCells ?? [];
+    const cellValues: string[] = [
+      holding.schemeName ?? "",
+      holding.investments ?? "",
+      holding.currentValue ?? "",
+      holding["unrealisedGain/Loss"] ?? holding.gainLoss ?? "",
+      holding.holdingPercentage ?? "",
+    ];
+
+    for (
+      let colIdx = 0;
+      colIdx < Math.max(cells.length, cellValues.length) &&
+      colIdx < cellValues.length;
+      colIdx++
+    ) {
+      const cell = cells[colIdx];
+      const newText = cellValues[colIdx];
+      const existingCellText = (cell?.text?.textElements ?? [])
+        .map((te: any) => te.textRun?.content ?? "")
+        .join("")
+        .trim();
+
+      if (existingCellText === newText) continue;
+
+      if (existingCellText) {
+        requests.push({
+          deleteText: {
+            objectId: tableId,
+            cellLocation: { rowIndex: rowIdx, columnIndex: colIdx },
+            textRange: { type: "ALL" },
+          },
+        });
+      }
+
+      if (newText) {
+        requests.push({
+          insertText: {
+            objectId: tableId,
+            cellLocation: { rowIndex: rowIdx, columnIndex: colIdx },
+            insertionIndex: 0,
+            text: newText,
+          },
+        });
+      }
+    }
+  }
+
+  // Clear extra rows beyond this chunk's count to preserve table layout cleanly
+  for (
+    let rowIdx = holdingsChunk.length + 1;
+    rowIdx < tableRows.length;
+    rowIdx++
+  ) {
+    const cells = tableRows[rowIdx]?.tableCells ?? [];
+    for (let colIdx = 0; colIdx < cells.length; colIdx++) {
+      const cell = cells[colIdx];
+      const existingCellText = (cell?.text?.textElements ?? [])
+        .map((te: any) => te.textRun?.content ?? "")
+        .join("")
+        .trim();
+
+      if (existingCellText) {
+        requests.push({
+          deleteText: {
+            objectId: tableId,
+            cellLocation: { rowIndex: rowIdx, columnIndex: colIdx },
+            textRange: { type: "ALL" },
+          },
+        });
+      }
+    }
+  }
+
+  return requests;
+}
+
 /** Keep known report labels from being treated as an investor name shape. */
 function isProtectedHeading(text: string): boolean {
   const normalized = text.replace(/\s+/g, " ").trim().toLowerCase();
@@ -1116,13 +1222,6 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
           }
           if (holdings.length > 0 || hasStructuredInvestorData) {
             const tableRequests: any[] = [];
-            // Captures style reference for each table that needs rows inserted.
-            // Must be declared here (outer scope) so the batch section can access it.
-            const styleInfoList: Array<{
-              tableId: string;
-              existingDataRows: number;
-              sourceRow: any;
-            }> = [];
 
             // Reuse maxEditSlide + allSlides hoisted from the shape-scan section above.
             // holdingsSlideIndex: 1-based (default 3 = slide 3). 0 = all slides.
@@ -1145,8 +1244,6 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                 if (!el.table) continue;
 
                 const tableRows = el.table.tableRows ?? [];
-                const tableId = el.objectId as string;
-
                 // Detect if this is the holdings table by checking header row text
                 const headerRow = tableRows[0];
                 const headerText = (headerRow?.tableCells ?? [])
@@ -1170,263 +1267,21 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   continue;
                 }
 
-                // If the table has fewer data rows than holdings, insert new rows first
                 const existingDataRows = tableRows.length - 1; // subtract header
-                if (holdings.length > existingDataRows) {
-                  const rowsToAdd = holdings.length - existingDataRows;
-                  const numCols =
-                    (tableRows[1]?.tableCells ?? tableRows[0]?.tableCells ?? [])
-                      .length || 5;
-                  for (let r = 0; r < rowsToAdd; r++) {
-                    tableRequests.push({
-                      insertTableRows: {
-                        tableObjectId: tableId,
-                        cellLocation: {
-                          rowIndex: tableRows.length - 1 + r,
-                          columnIndex: 0,
-                        },
-                        insertBelow: true,
-                        number: 1,
-                      },
-                    });
-                    // Suppress lint: numCols used below indirectly
-                    void numCols;
-                  }
-                  // Capture style reference while tableId/existingDataRows/tableRows are in scope
-                  styleInfoList.push({
-                    tableId,
-                    existingDataRows,
-                    sourceRow: tableRows[1] ?? null,
-                  });
-                }
-
-                // Populate data rows (row 0 = header, rows 1+ = data)
-                for (let rowIdx = 1; rowIdx <= holdings.length; rowIdx++) {
-                  const holdingIdx = rowIdx - 1;
-                  const holding = holdings[holdingIdx];
-                  const isNewRow = rowIdx >= tableRows.length;
-                  // Re-read cells from the existing table (new rows will be empty)
-                  const cells =
-                    (isNewRow
-                      ? tableRows[tableRows.length - 1]
-                      : tableRows[rowIdx]
-                    )?.tableCells ?? [];
-
-                  // Column order: 0=Scheme Name, 1=Investments, 2=Current Value,
-                  //               3=Unrealised Gain/Loss, 4=Holding %
-                  const cellValues: string[] = [
-                    holding.schemeName ?? "",
-                    holding.investments ?? "",
-                    holding.currentValue ?? "",
-                    holding["unrealisedGain/Loss"] ?? "",
-                    holding.holdingPercentage ?? "",
-                  ];
-
-                  for (
-                    let colIdx = 0;
-                    colIdx < Math.max(cells.length, cellValues.length) &&
-                    colIdx < cellValues.length;
-                    colIdx++
-                  ) {
-                    const cell = cells[colIdx];
-                    const newText = cellValues[colIdx];
-
-                    // Get existing cell text to check if update is needed
-                    const existingCellText = isNewRow
-                      ? ""
-                      : (cell?.text?.textElements ?? [])
-                          .map((te: any) => te.textRun?.content ?? "")
-                          .join("")
-                          .trim();
-
-                    // Only update if text actually changed (avoids unnecessary writes)
-                    if (!isNewRow && existingCellText === newText) continue;
-
-                    // Only deleteText when the cell has content — issuing deleteText
-                    // on an empty cell (startIndex 0 == endIndex 0) causes an API error.
-                    if (!isNewRow && existingCellText) {
-                      tableRequests.push({
-                        deleteText: {
-                          objectId: tableId,
-                          cellLocation: {
-                            rowIndex: rowIdx,
-                            columnIndex: colIdx,
-                          },
-                          textRange: { type: "ALL" },
-                        },
-                      });
-                    }
-
-                    if (newText) {
-                      tableRequests.push({
-                        insertText: {
-                          objectId: tableId,
-                          cellLocation: {
-                            rowIndex: rowIdx,
-                            columnIndex: colIdx,
-                          },
-                          insertionIndex: 0,
-                          text: newText,
-                        },
-                      });
-                    }
-                  }
-                }
-
-                // ── CLEAR extra rows beyond new holdings count ──
-                // If the previous sheet had more schemes, those old rows still exist in the
-                // table with stale data. Clear every cell in rows past holdings.length so
-                // they appear blank instead of showing the old scheme names/values.
-                for (
-                  let rowIdx = holdings.length + 1;
-                  rowIdx < tableRows.length;
-                  rowIdx++
-                ) {
-                  const cells = tableRows[rowIdx]?.tableCells ?? [];
-                  for (let colIdx = 0; colIdx < cells.length; colIdx++) {
-                    const cell = cells[colIdx];
-                    const existingCellText = (cell?.text?.textElements ?? [])
-                      .map((te: any) => te.textRun?.content ?? "")
-                      .join("")
-                      .trim();
-
-                    // Only issue deleteText if the cell actually has content
-                    if (existingCellText) {
-                      tableRequests.push({
-                        deleteText: {
-                          objectId: tableId,
-                          cellLocation: {
-                            rowIndex: rowIdx,
-                            columnIndex: colIdx,
-                          },
-                          textRange: { type: "ALL" },
-                        },
-                      });
-                    }
-                  }
-                }
+                const chunk0 = holdings.slice(0, existingDataRows);
+                const reqs = buildPopulateTableRequests(el, chunk0);
+                tableRequests.push(...reqs);
               }
             }
 
             tableRequestsCount = tableRequests.length;
 
             if (tableRequests.length > 0) {
-              // Insert rows first (if any), then update cell text in a second batch
-              // because insertTableRows changes row indices
-              const insertReqs = tableRequests.filter((r) => r.insertTableRows);
-              const cellReqs = tableRequests.filter((r) => !r.insertTableRows);
-
-              if (insertReqs.length > 0) {
-                await slides.presentations.batchUpdate({
-                  presentationId,
-                  requestBody: { requests: insertReqs },
-                });
-
-                // ── APPLY SOURCE-ROW STYLE TO NEWLY INSERTED ROWS ──
-                // insertTableRows does NOT copy cell styling — new rows always get
-                // the default (large font, transparent background). Fix: read style
-                // from the first existing data row and apply to all newly inserted rows.
-                const styleRequests: any[] = [];
-
-                for (const {
-                  tableId: tid,
-                  existingDataRows: edr,
-                  sourceRow,
-                } of styleInfoList) {
-                  const sourceCells = sourceRow?.tableCells ?? [];
-                  for (
-                    let newRowIdx = edr + 1;
-                    newRowIdx <= holdings.length;
-                    newRowIdx++
-                  ) {
-                    for (
-                      let colIdx = 0;
-                      colIdx < sourceCells.length;
-                      colIdx++
-                    ) {
-                      const srcCell = sourceCells[colIdx];
-
-                      // 1. Background fill colour
-                      const bgFill = (srcCell as any)?.tableCellProperties
-                        ?.tableCellBackgroundFill;
-                      if (bgFill) {
-                        styleRequests.push({
-                          updateTableCellProperties: {
-                            objectId: tid,
-                            tableRange: {
-                              location: {
-                                rowIndex: newRowIdx,
-                                columnIndex: colIdx,
-                              },
-                              rowSpan: 1,
-                              columnSpan: 1,
-                            },
-                            tableCellProperties: {
-                              tableCellBackgroundFill: bgFill,
-                            },
-                            fields: "tableCellBackgroundFill",
-                          },
-                        });
-                      }
-
-                      // 2. Text style — font size, family, colour, bold, italic
-                      const srcTextStyle = (
-                        (srcCell as any)?.text?.textElements ?? []
-                      ).find((te: any) => te.textRun?.style)?.textRun?.style;
-                      if (srcTextStyle) {
-                        styleRequests.push({
-                          updateTextStyle: {
-                            objectId: tid,
-                            cellLocation: {
-                              rowIndex: newRowIdx,
-                              columnIndex: colIdx,
-                            },
-                            style: srcTextStyle,
-                            textRange: { type: "ALL" },
-                            fields:
-                              "fontSize,foregroundColor,fontFamily,bold,italic",
-                          },
-                        });
-                      }
-
-                      // 3. Paragraph alignment
-                      const srcParaStyle = (
-                        (srcCell as any)?.text?.textElements ?? []
-                      ).find((te: any) => te.paragraphMarker?.style)
-                        ?.paragraphMarker?.style;
-                      if (srcParaStyle?.alignment) {
-                        styleRequests.push({
-                          updateParagraphStyle: {
-                            objectId: tid,
-                            cellLocation: {
-                              rowIndex: newRowIdx,
-                              columnIndex: colIdx,
-                            },
-                            style: { alignment: srcParaStyle.alignment },
-                            textRange: { type: "ALL" },
-                            fields: "alignment",
-                          },
-                        });
-                      }
-                    }
-                  }
-                }
-
-                if (styleRequests.length > 0) {
-                  await slides.presentations.batchUpdate({
-                    presentationId,
-                    requestBody: { requests: styleRequests },
-                  });
-                }
-              }
-
-              if (cellReqs.length > 0) {
-                const tableRes = await slides.presentations.batchUpdate({
-                  presentationId,
-                  requestBody: { requests: cellReqs },
-                });
-                occurrencesChanged += (tableRes.data.replies || []).length;
-              }
+              const tableRes = await slides.presentations.batchUpdate({
+                presentationId,
+                requestBody: { requests: tableRequests },
+              });
+              occurrencesChanged += (tableRes.data.replies || []).length;
             }
           }
         } catch (e) {
@@ -1447,14 +1302,15 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
       //   2. Fill the duplicated pair with that investor's data.
       //   3. After all investors are done, delete the original template slides 2 & 3
       //      so only the filled copies remain.
-      // ── Multi-investor & Outro Slide Preservation ─────────────────────────────
+      // ── Multi-investor & Holdings Pagination ──────────────────────────────────
       // Presentation slide layout:
       //   Slide 1: Cover slide (preserved)
       //   Slide 2: Template Summary slide (Investor 1)
-      //   Slide 3: Template Holdings slide (Investor 1)
-      //   Slides 4..N: Additional investor slides (duplicated for Investor 2, 3, etc.)
-      //   FINAL SLIDES: Static ending/outro slides (e.g. Slide 6, 7, 8) that MUST
-      //                 NEVER be changed, NEVER be deleted, and ALWAYS stick at the end.
+      //   Slide 3: Template Holdings slide (Investor 1, Chunk 0)
+      //   Slide 4..: Investor 1 Holdings continuation chunks (Chunk 1, Chunk 2...)
+      //   Followed by: Additional investors (Investor 2, 3...) with Summary + paginated Holdings
+      //   FINAL SLIDES: Static ending/outro slides (e.g. Insurance) that MUST
+      //                 NEVER be changed, NEVER be deleted, and ALWAYS stick at the very end.
       let multiInvestorError: string | undefined;
 
       try {
@@ -1477,9 +1333,8 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
           .slice(investorSlideEnd)
           .map((slide) => slide.objectId)
           .filter((id): id is string => Boolean(id));
+
         // Preserve the first summary and the first holdings table as templates.
-        // This also repairs decks from older runs where duplicated summaries
-        // were inserted before the first holdings slide.
         const investorSlides = allSlidesForLoop.slice(0, investorSlideEnd);
         const firstSummaryId = investorSlides[1]?.objectId;
         const firstHoldingsSlide =
@@ -1499,8 +1354,8 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
           )
           .map((slide) => slide.objectId)
           .filter((id): id is string => Boolean(id));
+
         // Clean up ONLY old generated investor slides from prior runs.
-        // Static outro/ending slides are 100% PRESERVED!
         if (oldGeneratedInvestorSlideIds.length > 0) {
           const deleteOldSlidesReqs = oldGeneratedInvestorSlideIds.map(
             (objectId) => ({
@@ -1513,61 +1368,139 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
           });
         }
 
-        const generatedInvestorSlideIds: string[] = [];
+        // Re-fetch after cleaning to get exact template slides 2 & 3
+        const freshPres = await slides.presentations.get({ presentationId });
+        const freshSlides = freshPres.data.slides || [];
+        const coverSlideId = freshSlides[0]?.objectId;
+        const templateSummarySlide = freshSlides[1];
+        const templateHoldingsSlide =
+          freshSlides
+            .slice(2)
+            .find((slide) => isInvestorHoldingsSlide(slide)) ?? freshSlides[2];
 
-        // If multiple investors, duplicate template slides 2 & 3 for each additional investor
-        if (investors.length > 1) {
-          // Re-fetch after cleaning to get exact template slides 2 & 3
-          const freshPres = await slides.presentations.get({ presentationId });
-          const freshSlides = freshPres.data.slides || [];
+        if (!templateSummarySlide || !templateHoldingsSlide) {
+          throw new Error(
+            "Template slides 2 and 3 not found. Ensure the presentation has at least 3 slides.",
+          );
+        }
 
-          const templateSummarySlide = freshSlides[1];
-          const templateHoldingsSlide = freshSlides[2];
+        // Dynamically determine page capacity from template table (fallback to 15)
+        const templateHoldingsTableEl = (
+          templateHoldingsSlide.pageElements || []
+        ).find(
+          (el: any) =>
+            el.table && isInvestorHoldingsSlide({ pageElements: [el] }),
+        );
+        const templateTable = templateHoldingsTableEl?.table;
+        const templateDataRows = (templateTable?.tableRows?.length ?? 16) - 1;
+        const pageSize = Math.max(
+          1,
+          templateDataRows > 0 ? templateDataRows : 15,
+        );
 
-          if (!templateSummarySlide || !templateHoldingsSlide) {
-            throw new Error(
-              "Template slides 2 and 3 not found. Ensure the presentation has at least 3 slides.",
+        // 1. Investor 0 Continuation Slides (if holdings.length > pageSize)
+        const inv0Holdings = investors[0]?.holdings ?? [];
+        const inv0Chunks = chunkHoldings(inv0Holdings, pageSize);
+        const inv0ContinuationIds: string[] = [];
+
+        if (inv0Chunks.length > 1) {
+          const inv0ExtraChunks = inv0Chunks.slice(1);
+          const dupRequests = inv0ExtraChunks.map(() => ({
+            duplicateObject: {
+              objectId: templateHoldingsSlide.objectId,
+            },
+          }));
+
+          const dupRes = await slides.presentations.batchUpdate({
+            presentationId,
+            requestBody: { requests: dupRequests },
+          });
+
+          const createdIds = (dupRes.data.replies || [])
+            .map((r) => r.duplicateObject?.objectId as string | undefined)
+            .filter((id): id is string => Boolean(id));
+
+          inv0ContinuationIds.push(...createdIds);
+
+          const presAfterInv0Dup = await slides.presentations.get({
+            presentationId,
+          });
+          const allSlidesAfterInv0Dup = presAfterInv0Dup.data.slides || [];
+
+          const tableReqsList: slides_v1.Schema$Request[] = [];
+          for (let i = 0; i < createdIds.length; i++) {
+            const slideId = createdIds[i];
+            const chunk = inv0ExtraChunks[i];
+            const slideObj = allSlidesAfterInv0Dup.find(
+              (s) => s.objectId === slideId,
             );
+            const tableEl = (slideObj?.pageElements || []).find(
+              (el: any) => el.table,
+            );
+            if (tableEl && chunk) {
+              tableReqsList.push(...buildPopulateTableRequests(tableEl, chunk));
+            }
           }
 
-          // Process investors[1], investors[2], ... in order
+          if (tableReqsList.length > 0) {
+            await slides.presentations.batchUpdate({
+              presentationId,
+              requestBody: { requests: tableReqsList },
+            });
+          }
+        }
+
+        // 2. Additional Investors (investors[1..N])
+        const additionalInvestorSlideIds: string[] = [];
+
+        if (investors.length > 1) {
           for (let invIdx = 1; invIdx < investors.length; invIdx++) {
             const investor = investors[invIdx];
+            const invChunks = chunkHoldings(investor.holdings ?? [], pageSize);
 
-            // 1. Duplicate both template slides (they'll be appended to the end)
+            // Duplicate 1 Summary slide + N Holdings slides in a single batch
+            const dupRequests = [
+              {
+                duplicateObject: {
+                  objectId: templateSummarySlide.objectId,
+                },
+              },
+              ...invChunks.map(() => ({
+                duplicateObject: {
+                  objectId: templateHoldingsSlide.objectId,
+                },
+              })),
+            ];
+
             const dupRes = await slides.presentations.batchUpdate({
               presentationId,
-              requestBody: {
-                requests: [
-                  {
-                    duplicateObject: {
-                      objectId: templateSummarySlide.objectId,
-                    },
-                  },
-                  {
-                    duplicateObject: {
-                      objectId: templateHoldingsSlide.objectId,
-                    },
-                  },
-                ],
-              },
+              requestBody: { requests: dupRequests },
             });
 
             const dupReplies = dupRes.data.replies || [];
             const newSummaryId = dupReplies[0]?.duplicateObject?.objectId as
               | string
               | undefined;
-            const newHoldingsId = dupReplies[1]?.duplicateObject?.objectId as
-              | string
-              | undefined;
+            const newHoldingsIds = dupReplies
+              .slice(1)
+              .map((r) => r.duplicateObject?.objectId as string | undefined)
+              .filter((id): id is string => Boolean(id));
 
-            if (!newSummaryId || !newHoldingsId) continue;
+            if (!newSummaryId) continue;
 
-            generatedInvestorSlideIds.push(newSummaryId, newHoldingsId);
+            additionalInvestorSlideIds.push(newSummaryId, ...newHoldingsIds);
 
-            // 2. Build replaceAllText requests scoped to the new slides only
+            const presAfterDup = await slides.presentations.get({
+              presentationId,
+            });
+            const currentSlides = presAfterDup.data.slides || [];
+            const newSummarySlide = currentSlides.find(
+              (s) => s.objectId === newSummaryId,
+            );
+            const summaryHeadingShape = getSummaryHeadingShape(newSummarySlide);
+            const summaryHeadingObjectId = summaryHeadingShape?.objectId;
+
             const invRequests: any[] = [];
-
             const addReplace = (
               oldText: string | undefined | null,
               newText: string,
@@ -1579,94 +1512,72 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   replaceAllText: {
                     containsText: { text: old, matchCase: false },
                     replaceText: next,
-                    pageObjectIds: [newSummaryId, newHoldingsId],
+                    pageObjectIds: [newSummaryId, ...newHoldingsIds],
                   },
                 });
               }
             };
 
-            // Re-read text from duplicated summary slide to find current values
-            const presAfterDup = await slides.presentations.get({
-              presentationId,
-            });
-            const newSummarySlide = (presAfterDup.data.slides || []).find(
-              (s) => s.objectId === newSummaryId,
-            );
-            const newHoldingsSlide = (presAfterDup.data.slides || []).find(
-              (s) => s.objectId === newHoldingsId,
-            );
-            const summaryHeadingShape = getSummaryHeadingShape(newSummarySlide);
-            const summaryHeadingObjectId = summaryHeadingShape?.objectId;
-
-            // Scan shapes on the new summary slide and replace values
-            for (const slide of [newSummarySlide, newHoldingsSlide].filter(
-              Boolean,
-            )) {
-              for (const el of slide?.pageElements || []) {
-                if (!el.shape?.text?.textElements) continue;
-                // The summary title is a standalone text shape too. Keep it
-                // out of the generic investor-name replacement below; it is
-                // restored explicitly by buildSummaryHeadingRequests.
-                if (
-                  slide === newSummarySlide &&
-                  (el.objectId === summaryHeadingObjectId ||
-                    isSummaryCardShapeText(getShapeText(el)))
-                ) {
-                  continue;
-                }
-                const ft = getShapeText(el);
-                const ftl = ft.toLowerCase();
-                const ls = ft
-                  .split(/\r?\n/)
-                  .flatMap((line) => line.split(String.fromCharCode(11)))
-                  .map((l) => l.trim())
-                  .filter(Boolean);
-
-                if (
-                  investor.investorName &&
-                  /^[A-Za-z\s&.',()-]+$/.test(ft.trim()) &&
-                  !ftl.includes("investor\n") &&
-                  !ftl.includes("overall") &&
-                  !ftl.includes("invested") &&
-                  !ftl.includes("current value") &&
-                  !ftl.includes("return") &&
-                  !ftl.includes("gain") &&
-                  ft.trim().length > 2 &&
-                  ft.trim().length < 80
-                ) {
-                  addReplace(ft.trim(), investor.investorName);
-                }
-                if (investor.investorName && ftl.includes("investor\n"))
-                  addReplace(ls[1], investor.investorName);
-                if (investor.investmentAmount && ftl.includes("invested"))
-                  addReplace(
-                    ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
-                    investor.investmentAmount,
-                  );
-                if (
-                  investor.currentValue &&
-                  ftl.includes("current value") &&
-                  !ftl.includes("gain")
-                )
-                  addReplace(
-                    ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
-                    investor.currentValue,
-                  );
-                if (
-                  investor.overallReturn &&
-                  ftl.includes("return") &&
-                  !ftl.includes("gain")
-                )
-                  addReplace(
-                    ls[1] ?? ft.match(/(-?[\d.,]+%)/)?.[1],
-                    investor.overallReturn,
-                  );
-                if (investor.gainLoss && ftl.includes("gain"))
-                  addReplace(
-                    ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
-                    investor.gainLoss,
-                  );
+            for (const el of newSummarySlide?.pageElements || []) {
+              if (!el.shape?.text?.textElements) continue;
+              if (
+                el.objectId === summaryHeadingObjectId ||
+                isSummaryCardShapeText(getShapeText(el))
+              ) {
+                continue;
               }
+              const ft = getShapeText(el);
+              const ftl = ft.toLowerCase();
+              const ls = ft
+                .split(/\r?\n/)
+                .flatMap((line) => line.split(String.fromCharCode(11)))
+                .map((l) => l.trim())
+                .filter(Boolean);
+
+              if (
+                investor.investorName &&
+                /^[A-Za-z\s&.',()-]+$/.test(ft.trim()) &&
+                !ftl.includes("investor\n") &&
+                !ftl.includes("overall") &&
+                !ftl.includes("invested") &&
+                !ftl.includes("current value") &&
+                !ftl.includes("return") &&
+                !ftl.includes("gain") &&
+                ft.trim().length > 2 &&
+                ft.trim().length < 80
+              ) {
+                addReplace(ft.trim(), investor.investorName);
+              }
+              if (investor.investorName && ftl.includes("investor\n"))
+                addReplace(ls[1], investor.investorName);
+              if (investor.investmentAmount && ftl.includes("invested"))
+                addReplace(
+                  ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
+                  investor.investmentAmount,
+                );
+              if (
+                investor.currentValue &&
+                ftl.includes("current value") &&
+                !ftl.includes("gain")
+              )
+                addReplace(
+                  ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
+                  investor.currentValue,
+                );
+              if (
+                investor.overallReturn &&
+                ftl.includes("return") &&
+                !ftl.includes("gain")
+              )
+                addReplace(
+                  ls[1] ?? ft.match(/(-?[\d.,]+%)/)?.[1],
+                  investor.overallReturn,
+                );
+              if (investor.gainLoss && ftl.includes("gain"))
+                addReplace(
+                  ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
+                  investor.gainLoss,
+                );
             }
 
             if (invRequests.length > 0) {
@@ -1685,7 +1596,6 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
               });
             }
 
-            // Repair summary-card values and labels after investor-name replacements.
             const presAfterCardFix = await slides.presentations.get({
               presentationId,
             });
@@ -1703,306 +1613,59 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
               });
             }
 
-            // 3. Populate holdings table on the new holdings slide
-            if (newHoldingsSlide) {
-              for (const el of newHoldingsSlide.pageElements || []) {
-                if (!el.table) continue;
-                const tableId = el.objectId as string;
-                const tableRows = el.table.tableRows ?? [];
-                const headerText = (tableRows[0]?.tableCells ?? [])
-                  .map((c: any) =>
-                    (c.text?.textElements ?? [])
-                      .map((te: any) => te.textRun?.content ?? "")
-                      .join("")
-                      .trim()
-                      .toLowerCase(),
-                  )
-                  .join(" ");
-                if (
-                  !headerText.includes("scheme") &&
-                  !headerText.includes("investment") &&
-                  !headerText.includes("holding")
-                )
-                  continue;
+            // Populate all holdings chunks for this investor
+            const presForHoldings = await slides.presentations.get({
+              presentationId,
+            });
+            const slidesForHoldings = presForHoldings.data.slides || [];
+            const allHoldingsRequests: slides_v1.Schema$Request[] = [];
 
-                const existingDataRows = tableRows.length - 1;
-                const sourceRow = tableRows[1] ?? null;
-                const tableReqsInv: any[] = [];
-                const styleRequestsInv: any[] = [];
-
-                if (investor.holdings.length > existingDataRows) {
-                  const rowsToAdd = investor.holdings.length - existingDataRows;
-                  for (let r = 0; r < rowsToAdd; r++) {
-                    tableReqsInv.push({
-                      insertTableRows: {
-                        tableObjectId: tableId,
-                        cellLocation: {
-                          rowIndex: tableRows.length - 1 + r,
-                          columnIndex: 0,
-                        },
-                        insertBelow: true,
-                        number: 1,
-                      },
-                    });
-                  }
-
-                  // Copy styles to newly inserted rows
-                  if (sourceRow) {
-                    const sourceCells = sourceRow.tableCells ?? [];
-                    for (
-                      let newRowIdx = existingDataRows + 1;
-                      newRowIdx <= investor.holdings.length;
-                      newRowIdx++
-                    ) {
-                      for (
-                        let colIdx = 0;
-                        colIdx < sourceCells.length;
-                        colIdx++
-                      ) {
-                        const srcCell = sourceCells[colIdx];
-                        const bgFill = (srcCell as any)?.tableCellProperties
-                          ?.tableCellBackgroundFill;
-                        if (bgFill) {
-                          styleRequestsInv.push({
-                            updateTableCellProperties: {
-                              objectId: tableId,
-                              tableRange: {
-                                location: {
-                                  rowIndex: newRowIdx,
-                                  columnIndex: colIdx,
-                                },
-                                rowSpan: 1,
-                                columnSpan: 1,
-                              },
-                              tableCellProperties: {
-                                tableCellBackgroundFill: bgFill,
-                              },
-                              fields: "tableCellBackgroundFill",
-                            },
-                          });
-                        }
-                        const srcTextStyle = (
-                          (srcCell as any)?.text?.textElements ?? []
-                        ).find((te: any) => te.textRun?.style)?.textRun?.style;
-                        if (srcTextStyle) {
-                          styleRequestsInv.push({
-                            updateTextStyle: {
-                              objectId: tableId,
-                              cellLocation: {
-                                rowIndex: newRowIdx,
-                                columnIndex: colIdx,
-                              },
-                              style: srcTextStyle,
-                              textRange: { type: "ALL" },
-                              fields:
-                                "fontSize,foregroundColor,fontFamily,bold,italic",
-                            },
-                          });
-                        }
-                        const srcParaStyle = (
-                          (srcCell as any)?.text?.textElements ?? []
-                        ).find((te: any) => te.paragraphMarker?.style)
-                          ?.paragraphMarker?.style;
-                        if (srcParaStyle?.alignment) {
-                          styleRequestsInv.push({
-                            updateParagraphStyle: {
-                              objectId: tableId,
-                              cellLocation: {
-                                rowIndex: newRowIdx,
-                                columnIndex: colIdx,
-                              },
-                              style: { alignment: srcParaStyle.alignment },
-                              textRange: { type: "ALL" },
-                              fields: "alignment",
-                            },
-                          });
-                        }
-                      }
-                    }
-                  }
-                }
-
-                // Execute row insertions first
-                const insertInv = tableReqsInv.filter((r) => r.insertTableRows);
-                if (insertInv.length > 0) {
-                  await slides.presentations.batchUpdate({
-                    presentationId,
-                    requestBody: { requests: insertInv },
-                  });
-                }
-
-                // Apply copied styles to newly inserted rows
-                if (styleRequestsInv.length > 0) {
-                  await slides.presentations.batchUpdate({
-                    presentationId,
-                    requestBody: { requests: styleRequestsInv },
-                  });
-                }
-
-                // Write holdings cell data
-                const cellRequestsInv: any[] = [];
-                for (let ri = 1; ri <= investor.holdings.length; ri++) {
-                  const h = investor.holdings[ri - 1];
-                  const vals = [
-                    h.schemeName,
-                    h.investments,
-                    h.currentValue,
-                    h["unrealisedGain/Loss"],
-                    h.holdingPercentage,
-                  ];
-                  const isNewRow = ri > existingDataRows;
-                  const cells =
-                    (isNewRow ? sourceRow : tableRows[ri])?.tableCells ?? [];
-
-                  for (let ci = 0; ci < vals.length; ci++) {
-                    const existing = isNewRow
-                      ? ""
-                      : (cells[ci]?.text?.textElements ?? [])
-                          .map((te: any) => te.textRun?.content ?? "")
-                          .join("")
-                          .trim();
-                    const newText = vals[ci];
-
-                    if (!isNewRow && existing === newText) continue;
-
-                    if (!isNewRow && existing) {
-                      cellRequestsInv.push({
-                        deleteText: {
-                          objectId: tableId,
-                          cellLocation: { rowIndex: ri, columnIndex: ci },
-                          textRange: { type: "ALL" },
-                        },
-                      });
-                    }
-
-                    if (newText) {
-                      cellRequestsInv.push({
-                        insertText: {
-                          objectId: tableId,
-                          cellLocation: { rowIndex: ri, columnIndex: ci },
-                          insertionIndex: 0,
-                          text: newText,
-                        },
-                      });
-                    }
-                  }
-                }
-
-                // Clear stale rows if investor has fewer holdings than existingDataRows
-                for (
-                  let ri = investor.holdings.length + 1;
-                  ri <= existingDataRows;
-                  ri++
-                ) {
-                  for (
-                    let ci = 0;
-                    ci < (tableRows[ri]?.tableCells ?? []).length;
-                    ci++
-                  ) {
-                    const existing = (
-                      (tableRows[ri].tableCells ?? [])[ci]?.text
-                        ?.textElements ?? []
-                    )
-                      .map((te: any) => te.textRun?.content ?? "")
-                      .join("")
-                      .trim();
-                    if (existing) {
-                      cellRequestsInv.push({
-                        deleteText: {
-                          objectId: tableId,
-                          cellLocation: { rowIndex: ri, columnIndex: ci },
-                          textRange: { type: "ALL" },
-                        },
-                      });
-                    }
-                  }
-                }
-
-                if (cellRequestsInv.length > 0) {
-                  await slides.presentations.batchUpdate({
-                    presentationId,
-                    requestBody: { requests: cellRequestsInv },
-                  });
-                }
+            for (let c = 0; c < invChunks.length; c++) {
+              const hSlideId = newHoldingsIds[c];
+              if (!hSlideId) continue;
+              const hSlide = slidesForHoldings.find(
+                (s) => s.objectId === hSlideId,
+              );
+              const tableEl = (hSlide?.pageElements || []).find(
+                (el: any) => el.table,
+              );
+              if (tableEl) {
+                const reqs = buildPopulateTableRequests(tableEl, invChunks[c]);
+                allHoldingsRequests.push(...reqs);
               }
+            }
+
+            if (allHoldingsRequests.length > 0) {
+              await slides.presentations.batchUpdate({
+                presentationId,
+                requestBody: { requests: allHoldingsRequests },
+              });
             }
           }
         }
 
-        // ── STICK OUTRO SLIDES AT THE VERY END ─────────────────────────────────
-        // DuplicateObject inserts slides beside their source templates. Move all generated
-        // slides after the first investor pair so every investor remains summary-then-holdings.
-        if (generatedInvestorSlideIds.length > 0) {
-          const presentationAfterGeneration = await slides.presentations.get({
-            presentationId,
-          });
-          const generatedIdSet = new Set(generatedInvestorSlideIds);
-          const generatedIdsInSlideOrder = (
-            presentationAfterGeneration.data.slides || []
-          )
-            .map((slide) => slide.objectId)
-            .filter((id): id is string =>
-              Boolean(id && generatedIdSet.has(id)),
-            );
-          if (generatedIdsInSlideOrder.length > 0) {
-            const generatedInsertionIndex = Math.max(
-              0,
-              (presentationAfterGeneration.data.slides?.length ?? 0) -
-                outroSlideIds.length,
-            );
-            // Google requires moved IDs in their current presentation order.
-            // Normalize first, then insert them before the stale ending slides.
-            await slides.presentations.batchUpdate({
-              presentationId,
-              requestBody: {
-                requests: [
-                  {
-                    updateSlidesPosition: {
-                      slideObjectIds: generatedIdsInSlideOrder,
-                      insertionIndex: 0,
-                    },
-                  },
-                ],
-              },
-            });
-            await slides.presentations.batchUpdate({
-              presentationId,
-              requestBody: {
-                requests: [
-                  {
-                    updateSlidesPosition: {
-                      slideObjectIds: generatedIdsInSlideOrder,
-                      insertionIndex: generatedInsertionIndex,
-                    },
-                  },
-                ],
-              },
-            });
-          }
-        }
+        // 3. Reorder all slides in exact investor-grouped order, followed by outro slides
+        const targetOrder: string[] = [
+          coverSlideId,
+          templateSummarySlide.objectId,
+          templateHoldingsSlide.objectId,
+          ...inv0ContinuationIds,
+          ...additionalInvestorSlideIds,
+          ...outroSlideIds,
+        ].filter((id): id is string => Boolean(id));
 
-        // If there are any static outro slides (e.g. Slide 6, 7, 8), ensure they are
-        // placed at the very end of the presentation after all investor slides.
-        if (outroSlideIds.length > 0) {
-          const presForFinalOrder = await slides.presentations.get({
-            presentationId,
-          });
-          const totalSlides = presForFinalOrder.data.slides?.length || 0;
+        const uniqueTargetOrder = Array.from(new Set(targetOrder));
+
+        if (uniqueTargetOrder.length > 0) {
+          const reorderRequests = uniqueTargetOrder.map((objectId, index) => ({
+            updateSlidesPosition: {
+              slideObjectIds: [objectId],
+              insertionIndex: index,
+            },
+          }));
           await slides.presentations.batchUpdate({
             presentationId,
-            requestBody: {
-              requests: [
-                {
-                  updateSlidesPosition: {
-                    slideObjectIds: outroSlideIds,
-                    insertionIndex: Math.max(
-                      0,
-                      totalSlides - outroSlideIds.length,
-                    ),
-                  },
-                },
-              ],
-            },
+            requestBody: { requests: reorderRequests },
           });
         }
       } catch (e) {
