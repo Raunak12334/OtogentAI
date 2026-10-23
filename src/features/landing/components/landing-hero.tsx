@@ -1,3 +1,131 @@
+"use client";
+
+import { useRef, useState, useCallback } from "react";
+
+/* ─── HeroButton ──────────────────────────────────────────────────────────── */
+function HeroButton() {
+  const btnRef = useRef<HTMLAnchorElement>(null);
+  const glowRef = useRef<HTMLSpanElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
+
+  /* Magnet + glow: track cursor relative to button */
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const btn = btnRef.current;
+    const glow = glowRef.current;
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+
+    /* Magnet: lean toward cursor (max ±6px / ±3px) */
+    const lx = (dx / (rect.width / 2)) * 6;
+    const ly = (dy / (rect.height / 2)) * 3;
+    btn.style.transform = `translate(${lx}px, ${ly}px) scale(${pressed ? 0.97 : 1})`;
+
+    /* Glow: follow cursor inside button */
+    if (glow) {
+      glow.style.left = `${e.clientX - rect.left}px`;
+      glow.style.top = `${e.clientY - rect.top}px`;
+    }
+  }, [pressed]);
+
+  const handleMouseEnter = useCallback(() => setHovered(true), []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHovered(false);
+    setPressed(false);
+    const btn = btnRef.current;
+    if (btn) btn.style.transform = "translate(0,0) scale(1)";
+  }, []);
+
+  const handleMouseDown = useCallback(() => {
+    setPressed(true);
+    const btn = btnRef.current;
+    if (btn) {
+      const cur = btn.style.transform.replace(/scale\([^)]*\)/, "").trim();
+      btn.style.transform = `${cur} scale(0.97)`;
+    }
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    setPressed(false);
+    const btn = btnRef.current;
+    if (btn) {
+      const cur = btn.style.transform.replace(/scale\([^)]*\)/, "").trim();
+      btn.style.transform = `${cur} scale(1)`;
+    }
+  }, []);
+
+  return (
+    <a
+      ref={btnRef}
+      href="/signup"
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      style={{
+        backgroundColor: "#121214",
+        transition: "transform 180ms cubic-bezier(0.23,1,0.32,1), box-shadow 200ms ease",
+      }}
+      className="relative overflow-hidden inline-flex items-center justify-between gap-5 pl-6 pr-1.5 py-1.5 h-12 rounded-full text-white font-semibold text-sm shadow-[0px_8px_24px_0px_color-mix(in_srgb,var(--ploy-text-primary)_16%,transparent)] group select-none cursor-pointer"
+    >
+      {/* ── Cursor glow ── */}
+      <span
+        ref={glowRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full"
+        style={{
+          background: "radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, transparent 70%)",
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 200ms ease",
+        }}
+      />
+
+      {/* ── Label ── */}
+      <span className="relative z-10 text-white tracking-tight">Start building</span>
+
+      {/* ── Signal dot / Arrow badge (aligned as in reference image) ── */}
+      <span
+        aria-hidden="true"
+        className="relative z-10 flex items-center justify-center w-9 h-9 rounded-full shrink-0"
+        style={{
+          backgroundColor: "#3b82f6",
+          boxShadow: "0 0 12px rgba(59, 130, 246, 0.35)",
+        }}
+      >
+        {/* diagonal ↗ arrow: initial position pointing up-corner right, turns on hover (350ms) */}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{
+            display: "block",
+            transition: "transform 350ms cubic-bezier(0.34,1.56,0.64,1)",
+            transform: hovered ? "rotate(45deg)" : "rotate(0deg)",
+          }}
+        >
+          <path
+            d="M2.5 11.5L11.5 2.5M11.5 2.5H5M11.5 2.5V9"
+            stroke="white"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </a>
+  );
+}
+
+/* ─── LandingHero ─────────────────────────────────────────────────────────── */
 export function LandingHero() {
   return (
     <section
@@ -23,15 +151,7 @@ export function LandingHero() {
               Design the workflow, assign specialized agents, and track every handoff from product prompt to deployment.
             </p>
 
-            <a
-              href="/signup"
-              className="bg-ploy-background-inverse text-ploy-text-inverse font-semibold text-sm inline-flex items-center gap-2.5 shadow-[0px_8px_24px_0px_color-mix(in_srgb,var(--ploy-text-primary)_16%,transparent)] transition-opacity px-6 py-3.5 rounded-full group hover:opacity-85"
-            >
-              <span>Start building</span>
-              <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-                →
-              </span>
-            </a>
+            <HeroButton />
           </div>
         </div>
 
