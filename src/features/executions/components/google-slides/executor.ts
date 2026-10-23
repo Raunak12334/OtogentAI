@@ -167,6 +167,7 @@ function isProtectedHeading(text: string): boolean {
     "invested amount",
     "current value",
     "overall return",
+    "over return",
     "unrealised gain/loss",
     "unrealized gain/loss",
     "investment amount",
@@ -199,6 +200,7 @@ function isSummaryCardLabel(text: string): boolean {
     "invested amount",
     "current value",
     "overall return",
+    "over return",
     "unrealised gain/loss",
     "unrealized gain/loss",
   ].includes(normalized);
@@ -271,12 +273,21 @@ function isInvestorSummarySlide(slide: any): boolean {
     .replace(/\s+/g, " ")
     .toLowerCase();
 
-  return (
-    text.includes("invested amount") &&
-    text.includes("current value") &&
-    text.includes("overall return") &&
-    text.includes("gain")
-  );
+  const hasInvest =
+    text.includes("invested amount") ||
+    text.includes("investment amount") ||
+    text.includes("invested");
+  const hasValue = text.includes("current value");
+  const hasReturn =
+    text.includes("overall return") ||
+    text.includes("over return") ||
+    text.includes("return");
+  const hasGain = text.includes("gain") || text.includes("loss");
+
+  const matchCount = [hasInvest, hasValue, hasReturn, hasGain].filter(
+    Boolean,
+  ).length;
+  return matchCount >= 3;
 }
 
 function isSummaryCardShapeText(text: string): boolean {
@@ -284,7 +295,9 @@ function isSummaryCardShapeText(text: string): boolean {
   return (
     (normalized.includes("invest") && normalized.includes("amount")) ||
     (normalized.includes("current value") && !normalized.includes("gain")) ||
-    ((normalized.includes("overall") || normalized.includes("return")) &&
+    ((normalized.includes("overall") ||
+      normalized.includes("return") ||
+      normalized.includes("over return")) &&
       !normalized.includes("gain")) ||
     (normalized.includes("gain") && normalized.includes("loss"))
   );
@@ -379,9 +392,21 @@ function buildSummaryCardRequests(
     const isCurrentValueCard =
       lowerText.includes("current value") && !lowerText.includes("gain");
     const isOverallReturnCard =
-      (lowerText.includes("overall") || lowerText.includes("return")) &&
+      (lowerText.includes("overall") ||
+        lowerText.includes("return") ||
+        lowerText.includes("over return")) &&
       !lowerText.includes("gain");
     const isGainCard = lowerText.includes("gain") && lowerText.includes("loss");
+
+    if (fullText.includes("Over Return")) {
+      requests.push({
+        replaceAllText: {
+          containsText: { text: "Over Return", matchCase: true },
+          replaceText: "Overall Return",
+          pageObjectIds: [slide.objectId],
+        },
+      });
+    }
 
     if (summary.investmentAmount && isInvestmentCard) {
       requests.push(
@@ -1153,19 +1178,24 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   pushReplace(currentValue, summaryData.currentValue);
               }
 
-              // Slide 2: Overall Return card — replace the value line only
+              // Slide 2: Overall Return card — replace the value line and ensure label is "Overall Return"
               if (
-                summaryData.overallReturn &&
                 !fullTextLower.includes("gain") &&
-                fullTextLower.includes("return")
+                (fullTextLower.includes("return") ||
+                  fullTextLower.includes("over return"))
               ) {
-                const currentValue =
-                  lines[1] ?? fullText.match(/(-?[\d.,]+%)/)?.[1];
-                console.log(
-                  `[google-slides] Found Overall Return shape. fullText: ${JSON.stringify(fullText)}, lines: ${JSON.stringify(lines)}, extracted value: ${currentValue}, summaryData.overallReturn: ${summaryData.overallReturn}`,
-                );
-                if (currentValue)
-                  pushReplace(currentValue, summaryData.overallReturn);
+                if (fullText.includes("Over Return")) {
+                  pushReplace("Over Return", "Overall Return");
+                }
+                if (summaryData.overallReturn) {
+                  const currentValue =
+                    lines[1] ?? fullText.match(/(-?[\d.,]+%)/)?.[1];
+                  console.log(
+                    `[google-slides] Found Overall Return shape. fullText: ${JSON.stringify(fullText)}, lines: ${JSON.stringify(lines)}, extracted value: ${currentValue}, summaryData.overallReturn: ${summaryData.overallReturn}`,
+                  );
+                  if (currentValue)
+                    pushReplace(currentValue, summaryData.overallReturn);
+                }
               }
 
               // Slide 2: Gain/Loss card — replace the value line only
@@ -1318,42 +1348,41 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
         const presForLoop = await slides.presentations.get({ presentationId });
         const allSlidesForLoop = presForLoop.data.slides || [];
 
-        // Detect the first static outro by slide structure instead of assuming
-        // the last three slides are outros. Old generated investor slides are
-        // themselves summary/holdings slides and must be eligible for cleanup.
-        const firstOutroIndex = allSlidesForLoop.findIndex(
-          (slide, index) =>
-            index >= 3 &&
-            !isInvestorSummarySlide(slide) &&
-            !isInvestorHoldingsSlide(slide),
-        );
-        const investorSlideEnd =
-          firstOutroIndex === -1 ? allSlidesForLoop.length : firstOutroIndex;
-        const outroSlideIds = allSlidesForLoop
-          .slice(investorSlideEnd)
-          .map((slide) => slide.objectId)
-          .filter((id): id is string => Boolean(id));
+        // Identify the template slides: Cover (0), first Summary, and first Holdings table
+        const initialCoverSlideId = allSlidesForLoop[0]?.objectId;
+        const templateSummarySlideCandidate =
+          allSlidesForLoop.find(
+            (slide, idx) => idx > 0 && isInvestorSummarySlide(slide),
+          ) ?? allSlidesForLoop[1];
+        const templateHoldingsSlideCandidate =
+          allSlidesForLoop.find(
+            (slide, idx) => idx > 0 && isInvestorHoldingsSlide(slide),
+          ) ?? allSlidesForLoop[2];
 
-        // Preserve the first summary and the first holdings table as templates.
-        const investorSlides = allSlidesForLoop.slice(0, investorSlideEnd);
-        const firstSummaryId = investorSlides[1]?.objectId;
-        const firstHoldingsSlide =
-          investorSlides
-            .slice(2)
-            .find((slide) => isInvestorHoldingsSlide(slide)) ??
-          investorSlides[2];
         const templateInvestorSlideIds = new Set(
-          [firstSummaryId, firstHoldingsSlide?.objectId].filter(
-            (id): id is string => Boolean(id),
-          ),
+          [
+            initialCoverSlideId,
+            templateSummarySlideCandidate?.objectId,
+            templateHoldingsSlideCandidate?.objectId,
+          ].filter((id): id is string => Boolean(id)),
         );
-        const oldGeneratedInvestorSlideIds = investorSlides
-          .slice(1)
-          .filter(
-            (slide) => !templateInvestorSlideIds.has(slide.objectId ?? ""),
-          )
-          .map((slide) => slide.objectId)
-          .filter((id): id is string => Boolean(id));
+
+        // Partition remaining slides into:
+        // 1. oldGeneratedInvestorSlideIds: Old generated investor slides from prior runs (summary or holdings)
+        // 2. outroSlideIds: Static outro slides (e.g. Insurance, Disclaimers) to preserve at the end
+        const oldGeneratedInvestorSlideIds: string[] = [];
+        const outroSlideIds: string[] = [];
+
+        for (const slide of allSlidesForLoop) {
+          if (!slide.objectId || templateInvestorSlideIds.has(slide.objectId)) {
+            continue;
+          }
+          if (isInvestorSummarySlide(slide) || isInvestorHoldingsSlide(slide)) {
+            oldGeneratedInvestorSlideIds.push(slide.objectId);
+          } else {
+            outroSlideIds.push(slide.objectId);
+          }
+        }
 
         // Clean up ONLY old generated investor slides from prior runs.
         if (oldGeneratedInvestorSlideIds.length > 0) {
@@ -1372,11 +1401,20 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
         const freshPres = await slides.presentations.get({ presentationId });
         const freshSlides = freshPres.data.slides || [];
         const coverSlideId = freshSlides[0]?.objectId;
-        const templateSummarySlide = freshSlides[1];
+        const templateSummarySlide =
+          freshSlides.find(
+            (slide) =>
+              slide.objectId === templateSummarySlideCandidate?.objectId,
+          ) ?? freshSlides[1];
         const templateHoldingsSlide =
+          freshSlides.find(
+            (slide) =>
+              slide.objectId === templateHoldingsSlideCandidate?.objectId,
+          ) ??
           freshSlides
             .slice(2)
-            .find((slide) => isInvestorHoldingsSlide(slide)) ?? freshSlides[2];
+            .find((slide) => isInvestorHoldingsSlide(slide)) ??
+          freshSlides[2];
 
         if (!templateSummarySlide || !templateHoldingsSlide) {
           throw new Error(
@@ -1565,14 +1603,19 @@ export const googleSlidesExecutor: NodeExecutor<GoogleSlidesData> = async ({
                   investor.currentValue,
                 );
               if (
-                investor.overallReturn &&
-                ftl.includes("return") &&
+                (ftl.includes("return") || ftl.includes("over return")) &&
                 !ftl.includes("gain")
-              )
-                addReplace(
-                  ls[1] ?? ft.match(/(-?[\d.,]+%)/)?.[1],
-                  investor.overallReturn,
-                );
+              ) {
+                if (ft.includes("Over Return")) {
+                  addReplace("Over Return", "Overall Return");
+                }
+                if (investor.overallReturn) {
+                  addReplace(
+                    ls[1] ?? ft.match(/(-?[\d.,]+%)/)?.[1],
+                    investor.overallReturn,
+                  );
+                }
+              }
               if (investor.gainLoss && ftl.includes("gain"))
                 addReplace(
                   ls[1] ?? ft.match(/(-?₹?\s*[\d.,]+)/)?.[1],
